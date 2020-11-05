@@ -39,17 +39,12 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, background = NULL, height = 100,
-                           # selectInput("k","Investigate kth land:", selected = 1, choices=1:n))
                            uiOutput("selectk"))
                 ),
                 
                 column(width = 4,
                        box(width = NULL, background = NULL, height = 100,
-                           # conditionalPanel(
-                           #   condition = "output.hasname_scanid",
-                           #   selectInput("scanID","Investigate according to the Scan ID :",
-                           #               selected = all_scan_id[1], choices=all_scan_id)
-                           # )
+
                            uiOutput("selectid")
                        )
                 ),
@@ -113,37 +108,46 @@ ui <- dashboardPage(
       # Second tab content
       tabItem(tabName = "x3pp",
               h2("play with x3p files"),
-              fluidRow(
-                column(width = 3, offset = 1, 
-                       shinyDirButton("x3pdir", "Input directory", "Upload")
-                )
-                
-              ),
+
               sidebarPanel(
-                actionButton("cp_size", "Compute x3p Object Size"),
-                checkboxInput("ck_mtomum", "m_to_mum", FALSE),
-                checkboxInput("ck_rotation", "rotation", FALSE),
-                uiOutput("r_angle_out"),
-                checkboxInput("ck_flip", "y_flip", FALSE),
-                checkboxInput("ck_downsample", "down sample", FALSE),
-                uiOutput("ds_m_out"),
+                shinyDirButton("x3pdir", "Input directory", "Upload"),
                 
                 conditionalPanel(
                   condition = "output.hasname_x3p",
                   actionButton("displayx3p2", "Display x3p image")
                 ),
                 
-                actionButton("process_x3p", "Process x3p"),
-                actionButton("prep_shinytt", "Prepare for shiny.tt")
+                actionButton("updateCode", "update code"),
+                actionButton("clean_code_window", "clean all the code"),
+                
+                x3pActionButtonUI("prepare_shinytt", "Prepare the data for investigation!"),
+                
+                downloadButton("mydownload")
               ),
               
               mainPanel(
-                verbatimTextOutput("x3pdir_prompt"),
-                verbatimTextOutput("x3pinfo"),
-                verbatimTextOutput("prep_shiny_ppt"),
-                verbatimTextOutput("prep_shiny_ppt1"),
-                rglwidgetOutput("x3prgl2")
-              )
+                column(width = 6,
+                       box(
+                         x3pActionButtonUI("x3p_show_xml", "Show x3p size")
+                       ),
+                       box(
+                         x3pActionButtonUI("x3p_flip", "Flip y!")
+                       ),
+                       
+                       box(
+                         x3p_sampleUI("x3p_sample", "Compute x3p_sample")
+                       )
+                ),
+                
+                column(width = 6,
+                       box(x3pActionButtonUI("x3p_m_to_mum", "Change m to mum")), 
+                       box(x3p_rotateUI("x3p_rotate", "Rotate the x3p file"))),
+                
+              ),
+
+              aceEditor("myEditor", "", mode = "r", readOnly = TRUE, theme = "chrome"),
+              
+              rglwidgetOutput("x3prgl2")
               
 
       ),

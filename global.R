@@ -1,6 +1,5 @@
 # https://annielyu.com/2020/02/04/viscover-shiny/
 
-
 library(shinydashboard)
 library(shinyFiles)
 library(shiny)
@@ -10,11 +9,23 @@ library(x3ptools)
 library(dplyr)
 library(bulletxtrctr)
 library(shinybusy)
+library(shinyAce)
+library(formatR)
 
 
 options(shiny.maxRequestSize=2*1024^3,
-        shiny.reactlog=TRUE)
-options()
+        shiny.reactlog=TRUE,
+        width = 105)
+
+
+# create a temp folder
+userdir <- tempfile()
+dir.create(userdir, recursive = TRUE)
+sapply(file.path(userdir, dir(userdir)[grep("code_", dir(userdir))]), file.remove)
+
+source("R/global_helper.R", local = TRUE)
+
+init_code_all_R(userdir)
 
 if (!exists("shiny.tt")) {
   shiny.tt <- tibble()
@@ -32,3 +43,17 @@ onStop(function() {
   rm(NOSHINY_TT, envir = globalenv())
   if(nrow(shiny.tt) == 0) { rm(shiny.tt, envir = globalenv()) }
 })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
