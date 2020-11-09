@@ -21,13 +21,26 @@ ui <- dashboardPage(
     tabItems(
       
       tabItem(tabName = "info",
-              h2("Welcome!"),
-              p("this is a paragraph."),
-              p("the second paragraph."),
-              actionButton("ttcheck", "Check Shiny.tt", icon = icon("search")),
+              h2("Welcome to bulletInvestigatoR!"),
+              h4("bulletxtrctr in an interactive way"),
+              p("obtain 'good' bullet signatures"),
+              p("- process x3p files"),
+              p("- compute crosscut, ccdata, and grooves"),
+              p("- check groove locations and update crosscut values if needed"),
+              p("- save/load your work; output as a csv file (todo)"),
+              h4("reproducible"),
+              p("- automatically generate R codes"),
+              p("- use these R codes one could obtain the exactly same object"),
+              p("- output/download the R codes (todo)"),
+              h4("extensible"),
+              p("- plug in different modules to extend the functionality of this APP"),
+              p("- modules are essentially functions(x3ptools, bulletxtrctr) calls"),
+              
+              actionButton("ttcheck", "Check if the app is ready for investigation", icon = icon("search")),
               verbatimTextOutput("checkresult"),
               verbatimTextOutput("suggest"),
-              shinyFilesButton("file1", "Select a rds file", "Please select a file", 
+              shinyFilesButton("file1", "Select a rds file (your bullet object)", 
+                               "Please select a rds file (your bullet object); column x3p/grooves is expected", 
                                multiple = FALSE, viewtype = "detail"),
               verbatimTextOutput("file1_prompt")
       ),
@@ -110,7 +123,7 @@ ui <- dashboardPage(
               h2("play with x3p files"),
 
               sidebarPanel(
-                shinyDirButton("x3pdir", "Input directory", "Upload"),
+                shinyDirButton("x3pdir", "Select a folder containing x3p files", "Upload"),
                 
                 conditionalPanel(
                   condition = "output.hasname_x3p",
@@ -122,7 +135,7 @@ ui <- dashboardPage(
                 
                 x3pActionButtonUI("prepare_shinytt", "Prepare the data for investigation!"),
                 
-                downloadButton("mydownload")
+                downloadButton("mydownload", label = "Download R codes")
               ),
               
               mainPanel(

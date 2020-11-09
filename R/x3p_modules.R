@@ -23,10 +23,21 @@ x3p_flip_yServer <- function(id, data, userdir) {
         
         validate(need(assertthat::has_name(isolate(data()), "x3p"), message = "Couldn't find column x3p."))
         shiny.r$data <<- data() %>% mutate(x3p = x3p %>% purrr::map(.f = y_flip_x3p))
-        
+
         output$text_window <- renderText({
           paste("good for x3p_flip_y")
         })
+        
+        
+        # tmp <- try(data() %>% mutate(x3p = x3p %>% purrr::map(.f = y_flip_x3p)))
+        # 
+        # browser()
+        # 
+        # output$text_window <- renderText({
+        #   validate(need(tmp, message = "Couldn't find column x3p."))
+        #   shiny.r$data <<- tmp
+        #   paste("good for x3p_flip_y")
+        # })        
         
         interpolate(~(bullet <- bullet %>% mutate(x3p = x3p %>% purrr::map(.f = y_flip_x3p))),
                     mydir = userdir,

@@ -26,7 +26,7 @@ output$selectk <- renderUI({
 observeEvent(input$saveCurrentEnv, {
   shiny.tt <<- shiny.r$data
   output$saveptp <- renderText({
-    paste("Successfully updated shiny.tt")
+    paste("Successfully saved your progress. A object called 'shiny.tt' should be found in your R environment")
   })
   
 })
@@ -89,10 +89,14 @@ observe({
     observeEvent(input$scanID, {
       scanidx <- shiny.r$data %>% tibble::rowid_to_column() %>%
         filter(scan_id == isolate(input$scanID)) %>% pull(rowid)
+      # cat((scanidx))
       
-      updateSelectInput(session, "k","Investigate kth land:",
-                        selected = scanidx,
-                        choices=1:isolate(n()))
+      # if(scanidx != isolate(input$k)) {
+        updateSelectInput(session, "k","Investigate kth land:",
+                          selected = scanidx,
+                          choices=1:isolate(n()))
+      # }
+
     })
     
     observeEvent(input$k, {
@@ -135,8 +139,6 @@ observeEvent(input$file1, {
 })
 
 
-
-
 observe({
   if(!is.null(input$k)) {
     # if grooves are provided, draw plots
@@ -175,12 +177,13 @@ observe({
   }
 })
 
-
 # CONFIRM
 observeEvent(input$confirm,{
-  cat("Confirmed", input$k, "\n")
+  
+  k <- as.numeric(isolate(input$k))
+  cat("Confirmed", k, "\n")
   updateSelectInput(session, "k","Investigate kth land:",
-                    selected = as.numeric(input$k)+1,
+                    selected = k+1,
                     choices=1:isolate(n()))
 })
 
@@ -196,11 +199,15 @@ output$downloadData <- downloadHandler(
 
 # MARK
 observeEvent(input$mark,{
-  k <- as.numeric(input$k)
-  shiny.r$data$grooves[[as.numeric(input$k)]]$marked <<- TRUE
-  cat("Marked Groove:", input$k, "\n")
-  if (hasname_scanid) {
-    cat("Marked Groove Bullet ID:", shiny.r$data$scan_id[k], "\n")
+  # req(isolate(input$mark))
+  # req(isolate(input$k))
+  # req(isolate(shiny.r))
+  
+  k <- as.numeric(isolate(input$k))
+  shiny.r$data$grooves[[k]]$marked <<- TRUE
+  cat("Marked Groove:", k, "\n")
+  if (isolate(hasname_scanid())) {
+    cat("Marked Groove Bullet ID:", isolate(shiny.r$data$scan_id[k]), "\n")
   } else {
     cat("Bullet ID is not available. \n")
   }
@@ -339,7 +346,7 @@ observeEvent(input$displayx3p2, {
 # EVENT: SELECT K
 observeEvent(input$k, {
   output$sigPlot <- renderPlot({
-    k <- as.numeric(input$k)
+    k <- as.numeric(isolate(input$k))
     ggplot() + geom_blank()
   })
 })
