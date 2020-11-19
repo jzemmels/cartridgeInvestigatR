@@ -1,5 +1,5 @@
 ui <- dashboardPage(
-  dashboardHeader(title = "bulletxtrctr Shiny Investigator",
+  dashboardHeader(title = "bulletinvestigatR",
                   titleWidth = 300),
   dashboardSidebar(
     sidebarMenu(

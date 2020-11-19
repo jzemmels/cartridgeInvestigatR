@@ -1,14 +1,13 @@
-n <- reactive({ nrow(shiny.r$data) })
-hasname_x3p <- reactive({ assertthat::has_name(shiny.r$data, "x3p") }) 
-hasname_scanid <- reactive({ assertthat::has_name(shiny.r$data, "scan_id") }) 
-hasname_grooves <- reactive({ assertthat::has_name(shiny.r$data, "grooves") }) 
-hasname_crosscut <- reactive({ assertthat::has_name(shiny.r$data, "crosscut") }) 
-check_names_all <- reactive({ shiny.r$data %>% assertthat::has_name(c("x3p", "crosscut", "grooves", "scan_id")) %>% all() })
-
+kk <- reactiveVal(1)
+hasname_x3p <- reactive({ assertthat::has_name(shiny.r$data, "x3p") })
+hasname_scanid <- reactive({ assertthat::has_name(shiny.r$data, "scan_id") })
+# dataPar <- data_CheckPar(isolate(shiny.r$data))
 all_scan_id <- reactive({
   if(hasname_scanid()) {shiny.r$data$scan_id}
   else { NULL }
 })
+
+FROM_CONFIRM <- FALSE
 
 # CONDITIONAL PANEL SETUP
 output$hasname_x3p <- hasname_x3p
@@ -17,11 +16,83 @@ outputOptions(output, "hasname_x3p", suspendWhenHidden = FALSE)
 output$hasname_scanid <- hasname_scanid
 outputOptions(output, "hasname_scanid", suspendWhenHidden = FALSE)
 
+###################################
 output$selectk <- renderUI({
-  # cat("bug\n")
-  selectInput("k","Investigate kth land:", selected = 1,
-              choices=1:n())
+  # cat("render k select, using:", kk(),"\n")
+  if(kk() <= dataPar$n) {
+    selectInput("k","Investigate kth land:", selected = kk(),
+                choices=1:dataPar$n)
+  } else {
+    NULL
+  }
+  
 })
+
+output$selectid <- renderUI({
+  # cat("render scanID select \n")
+  if(dataPar$hasname_scanid & kk() <= dataPar$n) {
+    selectInput("scanID","Investigate according to the Scan ID :",
+                selected = dataPar$all_scan_id[kk()],
+                choices = dataPar$all_scan_id)
+  } else {
+    NULL
+  }
+})
+
+observeEvent(input$scanID, {
+  scanidx <- shiny.r$data %>% tibble::rowid_to_column() %>%
+    filter(scan_id == isolate(input$scanID)) %>% pull(rowid)
+  
+  # cat("input$scanID is observed \n")
+  
+  if(!(FROM_CONFIRM & scanidx < kk())) {
+    if(scanidx != kk()) {
+      kk(scanidx)
+      FROM_CONFIRM <<- FALSE
+      # cat("assigning k a new value from scanID \n")
+      # cat("the value of input$scanID:", isolate(input$scanID), "\n")
+      # cat("the value of scanidx:", scanidx, "\n\n")
+    }
+  }
+  
+    
+})
+observeEvent(input$k, {
+    
+  # cat("input$k is observed, the value is:", input$k,  "\n")
+  # cat(FROM_CONFIRM, "\n")
+  # cat("the value of kk:", kk(), "\n")
+  if(!(FROM_CONFIRM & as.numeric(input$k) < kk())) {
+    if(input$k != kk()) {
+      # cat("assigning k a new value:", input$k ,"\n")
+      kk(as.numeric(isolate(input$k)))
+      FROM_CONFIRM <<- FALSE
+    }
+  }
+  
+  if(FROM_CONFIRM & as.numeric(input$k) == kk()) { FROM_CONFIRM <<- FALSE }
+
+})
+
+# CONFIRM
+observeEvent(input$confirm,{
+  
+  k.tmp <- isolate(kk())
+  # cat("Confirmed", k.tmp, "\n")
+  if(k.tmp + 1 <= dataPar$n) {
+    kk(k.tmp + 1)
+    FROM_CONFIRM <<- TRUE
+    # cat(FROM_CONFIRM ,"\n")
+  } 
+  # else {
+  #   kk(1)
+  #   FROM_CONFIRM <<- TRUE
+  # }
+  
+})
+#######################################
+
+
 
 observeEvent(input$saveCurrentEnv, {
   shiny.tt <<- shiny.r$data
@@ -33,10 +104,10 @@ observeEvent(input$saveCurrentEnv, {
 
 # check shiny.tt
 observeEvent(input$ttcheck, {
-  x3p_checker <- isolate(hasname_x3p())
-  crosscut_checker <- isolate(hasname_crosscut())
-  grooves_checker <- isolate(hasname_grooves())
-  scanid_checker <- isolate(hasname_scanid())
+  x3p_checker <- isolate(dataPar$hasname_x3p)
+  crosscut_checker <- isolate(dataPar$hasname_crosscut)
+  grooves_checker <- isolate(dataPar$hasname_grooves)
+  scanid_checker <- isolate(dataPar$hasname_scanid)
   
   if(NOSHINY_TT) {
     output$checkresult <- renderText({
@@ -77,37 +148,7 @@ observeEvent(input$ttcheck, {
 })
 
 
-# observe related to scanID
-observe({
-  if(hasname_scanid()) {
-    output$selectid <- renderUI({
-      selectInput("scanID","Investigate according to the Scan ID :",
-                  selected = all_scan_id()[1],
-                  choices=all_scan_id())
-    })
-    
-    observeEvent(input$scanID, {
-      scanidx <- shiny.r$data %>% tibble::rowid_to_column() %>%
-        filter(scan_id == isolate(input$scanID)) %>% pull(rowid)
-      # cat((scanidx))
-      
-      # if(scanidx != isolate(input$k)) {
-        updateSelectInput(session, "k","Investigate kth land:",
-                          selected = scanidx,
-                          choices=1:isolate(n()))
-      # }
 
-    })
-    
-    observeEvent(input$k, {
-      updateSelectInput(session, "scanID","Investigate according to the Scan ID :",
-                        selected = all_scan_id()[as.numeric(isolate(input$k))],
-                        choices = all_scan_id())
-    })
-  } else {
-    output$selectid <- renderUI({NULL})
-  }
-})
 
 # upload rds file
 volumes <- c(Home = fs::path_wd(), "R Installation" = R.home(), getVolumes()())
@@ -128,6 +169,7 @@ observeEvent(input$file1, {
     show_modal_spinner(spin = "atom", text = "Loading rds files...")
     
     shiny.r$data <<- readRDS(file$datapath)
+    dataPar <<- data_CheckPar(isolate(shiny.r$data))
     
     remove_modal_spinner()
     
@@ -142,9 +184,9 @@ observeEvent(input$file1, {
 observe({
   if(!is.null(input$k)) {
     # if grooves are provided, draw plots
-    if(hasname_grooves()){
+    if(dataPar$hasname_grooves){
       output$groovePlot <- renderPlot({
-        k <- as.numeric(input$k)
+        k <- kk()
         
         if(assertthat::has_name(shiny.r$data$grooves[[k]], "groove")){
           p <- shiny.r$data$grooves[[k]]$plot +
@@ -155,37 +197,29 @@ observe({
       })
       
       output$groovelocations <- renderText({
-        paste("Left Groove: ",shiny.r$data$grooves[[as.numeric(input$k)]]$groove[1],
-              "    Right Groove: ",shiny.r$data$grooves[[as.numeric(input$k)]]$groove[2])
+        paste("Left Groove: ",shiny.r$data$grooves[[kk()]]$groove[1],
+              "    Right Groove: ",shiny.r$data$grooves[[kk()]]$groove[2])
       })
     }
     
     # if x3p are provided, give all other stuff
-    if(hasname_x3p()){
+    if(dataPar$hasname_x3p){
       output$sigPlot <- renderPlot({
-        k <- as.numeric(input$k)
+        k <- kk()
         ggplot() + geom_blank()
       })
       
-      if(hasname_crosscut()){
+      if(dataPar$hasname_crosscut){
         output$ccvalue <- renderText({
           paste("Current Crosscut Value: ",
-                shiny.r$data$crosscut[as.numeric(input$k)] ) })
+                shiny.r$data$crosscut[kk()] ) })
       }
       
     }
   }
 })
 
-# CONFIRM
-observeEvent(input$confirm,{
-  
-  k <- as.numeric(isolate(input$k))
-  cat("Confirmed", k, "\n")
-  updateSelectInput(session, "k","Investigate kth land:",
-                    selected = k+1,
-                    choices=1:isolate(n()))
-})
+
 
 # SAVE 
 output$downloadData <- downloadHandler(
@@ -199,30 +233,28 @@ output$downloadData <- downloadHandler(
 
 # MARK
 observeEvent(input$mark,{
-  # req(isolate(input$mark))
-  # req(isolate(input$k))
-  # req(isolate(shiny.r))
   
-  k <- as.numeric(isolate(input$k))
+  k <- isolate(kk())
   shiny.r$data$grooves[[k]]$marked <<- TRUE
   cat("Marked Groove:", k, "\n")
-  if (isolate(hasname_scanid())) {
+  if (dataPar$hasname_scanid) {
     cat("Marked Groove Bullet ID:", isolate(shiny.r$data$scan_id[k]), "\n")
   } else {
     cat("Bullet ID is not available. \n")
   }
+  
 })
 
 # UNMARK
 observeEvent(input$unmark,{
-  shiny.r$data$grooves[[as.numeric(input$k)]]$marked <<- FALSE
-  cat("Unmarked Groove:", input$k, "\n")
+  shiny.r$data$grooves[[kk()]]$marked <<- FALSE
+  cat("Unmarked Groove:", isolate(kk()), "\n")
 })
 
 # EVENT: UPDATE CROSSCUT VALUE
 observeEvent(input$updateCC, {
   
-  k <- as.numeric(input$k)
+  k <- kk()
   tmp.tt <- shiny.r$data %>% slice(k)
   
   tmp.tt$crosscut <- as.numeric(input$cc)
@@ -235,20 +267,20 @@ observeEvent(input$updateCC, {
   shiny.r$data[k, c("crosscut", "ccdata", "grooves")] <<- tmp.tt %>% select(crosscut, ccdata, grooves)
   
   cat("updated crosscut value: ", shiny.r$data$crosscut[k], "\n")
-  if (isolate(hasname_scanid())) {
+  if (isolate(dataPar$hasname_scanid)) {
     cat("Bullet ID:", shiny.r$data$scan_id[k], "\n")
   } else {
     cat("Bullet ID is not available. \n")
   }
   output$ccvalue <- renderText({
     cat("test1")
-    paste("Current Crosscut Value: ", shiny.r$data$crosscut[as.numeric(input$k)] ) })
+    paste("Current Crosscut Value: ", shiny.r$data$crosscut[kk()]) })
   
 })
 
 # EVENT: DRAW SIGNATURE
 observeEvent(input$drawsig, {
-  k <- as.numeric(input$k)
+  k <- kk()
   
   # update: compute ccdata if null
   tmp.tt <- shiny.r$data %>% slice(k)
@@ -267,7 +299,7 @@ observeEvent(input$drawsig, {
   }
   
   output$sigPlot <- renderPlot({
-    k <- as.numeric(input$k)
+    k <- kk()
     p <- tmp.tt$sigs[[1]] %>% filter(!is.na(sig), !is.na(raw_sig)) %>%
       ggplot(aes(x = x)) +
       geom_line(aes(y = raw_sig), colour = "grey70") +
@@ -279,7 +311,7 @@ observeEvent(input$drawsig, {
 
 # EVENT: PLOT CLICK
 observeEvent(input$plot_click,{
-  k <- as.numeric(input$k)
+  k <- kk()
   xloc <- input$plot_click$x
   
   tmp <- isolate(shiny.r$data)
@@ -297,12 +329,12 @@ observeEvent(input$displayx3p, {
   req(shiny.r$data)
   req(input$k)
   
-  k <- as.numeric(input$k)
+  k <- kk()
   
   tmp <- isolate(shiny.r$data)
   
   output$x3prgl <- renderRglwidget({
-    if(isolate(hasname_crosscut())){
+    if(isolate(dataPar$hasname_crosscut)){
       image_x3p(
         tmp$x3p[k][[1]] %>% x3p_add_hline(
           yintercept = tmp$crosscut[k], size = 10)) 
@@ -321,7 +353,7 @@ observeEvent(input$displayx3p2, {
   tmp <- isolate(shiny.r$data)
   
   output$x3prgl2 <- renderRglwidget({
-    if(isolate(hasname_crosscut())){
+    if(isolate(dataPar$hasname_crosscut)){
       image_x3p(
         tmp$x3p[k][[1]] %>% x3p_add_hline(
           yintercept = tmp$crosscut[k], size = 10)) 
@@ -331,22 +363,11 @@ observeEvent(input$displayx3p2, {
   })
 })
 
-# observeEvent(input$displayx3p2, {
-#   k <- as.numeric(input$k)
-# 
-#   tmp <- isolate(shiny.r$data)
-# 
-#   output$x3prgl2 <- renderRglwidget({
-#     image_x3p(
-#       tmp$x3p[k][[1]] %>% x3p_add_hline(
-#         yintercept = tmp$crosscut[k], size = 10))
-#   })
-# })
 
 # EVENT: SELECT K
 observeEvent(input$k, {
   output$sigPlot <- renderPlot({
-    k <- as.numeric(isolate(input$k))
+    k <- isolate(kk())
     ggplot() + geom_blank()
   })
 })

@@ -227,6 +227,7 @@ prepare_tt_Server <- function(id, data, userdir) {
                       append = TRUE, eval = FALSE)
           
           shiny.r$data <<- tmp
+          dataPar <<- data_CheckPar(shiny.r$data)
           shiny.tt <<- shiny.r$data
           
           remove_modal_spinner()

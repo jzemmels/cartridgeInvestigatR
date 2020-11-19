@@ -1,0 +1,20 @@
+# require(shinydashboard)
+# require(shinyFiles)
+# require(shiny)
+# require(rgl)
+# require(ggplot2)
+# require(x3ptools)
+# require(dplyr)
+# require(bulletxtrctr)
+# require(shinybusy)
+# require(shinyAce)
+# require(formatR)
+
+# devtools::install_github("heike/x3ptools")
+# devtools::install_github("heike/bulletxtrctr")
+
+library(bulletxtrctr)
+library(x3ptools)
+library(tidyverse)
+
+shiny.tt <- read_bullet(urllist = hamby252demo)

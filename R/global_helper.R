@@ -32,3 +32,22 @@ init_code_all_R <- function(userdir) {
   interpolate(~(library(dplyr)), file = "code_All.R", mydir = userdir, append = TRUE, nodupes = TRUE)
   # interpolate(~('\n'), file = "code_All.R", mydir = userdir, append = TRUE, nodupes = TRUE)
 }
+
+## data checker
+data_CheckPar <- function(data) {
+  tt <- reactiveValues(
+    n = nrow(data),
+    hasname_x3p = assertthat::has_name(data, "x3p"),
+    hasname_scanid = assertthat::has_name(data, "scan_id"),
+    hasname_grooves = assertthat::has_name(data, "grooves"),
+    hasname_crosscut = assertthat::has_name(data, "crosscut"),
+    check_names_all = data %>% 
+      assertthat::has_name(c("x3p", "crosscut", "grooves", "scan_id")) %>% all()
+  )
+  
+  if(isolate(tt$hasname_scanid)) {
+    tt$all_scan_id <- data$scan_id
+  }
+  
+  return(tt)
+}

@@ -12,7 +12,9 @@ server = function(input, output, session) {
   code <- reactiveFileReader(500, session, file.path(userdir, "code_All.R"), clean_readlines)
   
   ## load the main part of the server
-  source("something/server_main.R", local = TRUE)
+  # check the location after installation of the package
+  ################ important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  source("inst/R/server_main.R", local = TRUE)
   
   ###################################
   ## x3p tag related
@@ -28,8 +30,8 @@ server = function(input, output, session) {
       show_modal_spinner(spin = "atom", text = "Loading x3p files...")
       
       shiny.r$data <<- try(read_bullet(dir))
-      # shiny.r$data <<- validate(need(read_bullet(dir), "No bullet files found."))
-      # browser()
+      dataPar <<- try(data_CheckPar(isolate(shiny.r$data)))
+      
       remove_modal_spinner()
       
       output$x3pdir_prompt <- renderText({
@@ -55,6 +57,7 @@ server = function(input, output, session) {
   
   observeEvent(input$clean_code_window, {
     shiny.r <<- reactiveValues(data = tibble())
+    dataPar <<- data_CheckPar(isolate(shiny.r$data))
     sapply(file.path(userdir, dir(userdir)[grep("code_", dir(userdir))]), file.remove)
     init_code_all_R(userdir)
   })
@@ -85,12 +88,12 @@ server = function(input, output, session) {
   
   ###########???
   ##############
-  output$mydownload <- downloadHandler(
-    filename = function() {  paste("bynvtgR_report-", Sys.Date(), ".R", sep="") },
-    content = function(file) { 
-      NULL
-    }
-  )
+  # output$mydownload <- downloadHandler(
+  #   filename = function() {  paste("bynvtgR_report-", Sys.Date(), ".R", sep="") },
+  #   content = function(file) { 
+  #     NULL
+  #   }
+  # )
   
   
 }

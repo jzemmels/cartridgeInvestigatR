@@ -37,10 +37,12 @@ if (!exists("shiny.tt")) {
 }
 
 shiny.r <- reactiveValues(data = shiny.tt)
+dataPar <- data_CheckPar(isolate(shiny.r$data))
 
 onStop(function() {
   rm(shiny.r, envir = globalenv())
   rm(NOSHINY_TT, envir = globalenv())
+  # rm(dataPar, envir = globalenv())
   if(nrow(shiny.tt) == 0) { rm(shiny.tt, envir = globalenv()) }
 })
 
