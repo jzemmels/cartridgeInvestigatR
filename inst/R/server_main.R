@@ -1,7 +1,7 @@
 kk <- reactiveVal(1)
 hasname_x3p <- reactive({ assertthat::has_name(shiny.r$data, "x3p") })
 hasname_scanid <- reactive({ assertthat::has_name(shiny.r$data, "scan_id") })
-# dataPar <- data_CheckPar(isolate(shiny.r$data))
+
 all_scan_id <- reactive({
   if(hasname_scanid()) {shiny.r$data$scan_id}
   else { NULL }

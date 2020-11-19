@@ -227,7 +227,7 @@ prepare_tt_Server <- function(id, data, userdir) {
                       append = TRUE, eval = FALSE)
           
           shiny.r$data <<- tmp
-          dataPar <<- data_CheckPar(shiny.r$data)
+          dataPar <<- data_CheckPar(isolate(shiny.r$data))
           shiny.tt <<- shiny.r$data
           
           remove_modal_spinner()
@@ -235,6 +235,8 @@ prepare_tt_Server <- function(id, data, userdir) {
           output$text_window <- renderText({
             paste("Finished data preparation! You are ready to start the investigation!")
           })
+          
+          # return(dataPar)
           
         } else {
           output$text_window <- renderText({
