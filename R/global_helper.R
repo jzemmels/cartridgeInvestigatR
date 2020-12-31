@@ -26,10 +26,16 @@ clean_readlines <- function(file) {
   return(tidy_source(file, output = FALSE)$text.tidy)
 }
 
-init_code_all_R <- function(userdir) {
-  interpolate(~(library(bulletxtrctr)), file = "code_All.R", mydir = userdir, append = FALSE, nodupes = TRUE)
-  interpolate(~(library(x3ptools)), file = "code_All.R", mydir = userdir, append = TRUE, nodupes = TRUE)
-  interpolate(~(library(dplyr)), file = "code_All.R", mydir = userdir, append = TRUE, nodupes = TRUE)
+init_code_all_R <- function(userdir, NOSHINY_TT) {
+  interpolate(~(library(bulletxtrctr)), file = "code_All.R", mydir = userdir, append = FALSE, nodupes = TRUE, eval=FALSE)
+  interpolate(~(library(x3ptools)), file = "code_All.R", mydir = userdir, append = TRUE, nodupes = TRUE, eval=FALSE)
+  interpolate(~(library(dplyr)), file = "code_All.R", mydir = userdir, append = TRUE, nodupes = TRUE, eval=FALSE)
+  
+  if(!NOSHINY_TT) {
+    interpolate(~("\n# bullet object is detected in the current environment."), 
+                file = "code_All.R", mydir = userdir, append = TRUE, nodupes = TRUE, eval=FALSE)
+  }
+  
   # interpolate(~('\n'), file = "code_All.R", mydir = userdir, append = TRUE, nodupes = TRUE)
 }
 

@@ -64,7 +64,13 @@ ui <- dashboardPage(
                 column(width = 4,
                        downloadButton("downloadData", "Save the Processed Data as a RDS file.",
                                       style="white-space: normal;text-align:center;"),
-                       p("It might take a few seconds to prepare for the saving.")
+                       p("It might take a few seconds to prepare for the saving."),
+                       textInput("save_csv_id", "Your Manual Code", value = "", width = NULL,
+                                 placeholder = TRUE),
+                       textInput("save_csv_study_name", "Name of the Study", value = "", width = NULL,
+                                 placeholder = TRUE),
+                       downloadButton("save_csv", "Output a CSV file",
+                                      style="white-space: normal;text-align:center;")
                 )
               ),
               
@@ -79,7 +85,13 @@ ui <- dashboardPage(
                 column(width = 9, 
                        actionButton("confirm", "Confirm"),
                        actionButton("mark", "Mark"),
-                       actionButton("unmark", "Unmark"))
+                       actionButton("unmark", "Unmark"),
+                       uiOutput("x3p_type_select_ui"),
+                       uiOutput("x3p_comment_box_ui"),
+                       # textAreaInput("x3p_comment_box", "comments", rows = 2, value = "abdc"),
+                       # actionButton("save_comment", "Save Comments")
+                       )
+
                 
               ),
               
@@ -90,10 +102,12 @@ ui <- dashboardPage(
                          box(width = NULL,
                              textOutput("ccvalue"),
                              numericInput("cc", "change crosscut to:", 100, min = 0, max = 1000),
-                             sliderInput("cc_slide", "change crosscut with a slider:",
-                                         min = 0, max = 1000,
-                                         value = 100, step = 0.1),
+                             # sliderInput("cc_slide", "change crosscut with a slider:",
+                             #             min = 0, max = 1000,
+                             #             value = 100, step = 0.1),
                              actionButton("updateCC", "Update Crosscut Value", width = "100%",
+                                          style="white-space: normal;text-align:center;"),
+                             actionButton("cc_status", "Check Crosscuts", width = "100%",
                                           style="white-space: normal;text-align:center;")
                          ),
                          actionButton("saveCurrentEnv", "Save your progress!"),
@@ -135,7 +149,7 @@ ui <- dashboardPage(
                 
                 x3pActionButtonUI("prepare_shinytt", "Prepare the data for investigation!"),
                 
-                downloadButton("mydownload", label = "Download R codes")
+                downloadButton("download_codes", label = "Download R codes")
               ),
               
               mainPanel(

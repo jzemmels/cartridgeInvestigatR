@@ -78,6 +78,10 @@ observeEvent(input$k, {
 observeEvent(input$confirm,{
   
   k.tmp <- isolate(kk())
+  comments <- isolate(input$x3p_comment_box)
+  
+  if(!is.null(comments)) { shiny.r$data$comments[k.tmp] <- comments }
+  
   # cat("Confirmed", k.tmp, "\n")
   if(k.tmp + 1 <= dataPar$n) {
     kk(k.tmp + 1)
@@ -92,7 +96,38 @@ observeEvent(input$confirm,{
 })
 #######################################
 
+########################
+# x3p types and comments
 
+# render ui for x3p type
+output$x3p_type_select_ui <- renderUI({
+  if(kk() <= dataPar$n) {
+    selectInput("x3p_type","type:", selected = shiny.r$data$type[kk()],
+                choices=c("NA", "type1-regular", "type2-tankrashed", "type3-damaged",
+                          "type4-too many missing values"))
+  } else {
+    NULL
+  }
+})
+
+# change the x3p type
+observeEvent(input$x3p_type, {
+  shiny.r$data$type[kk()] <- input$x3p_type
+})
+
+# render ui for x3p comment box
+output$x3p_comment_box_ui <- renderUI({
+  if(kk() <= dataPar$n) {
+    textAreaInput("x3p_comment_box", "Your Comments", value = shiny.r$data$comments[kk()],
+                  rows = 2)
+  } else {
+    NULL
+  }
+})
+
+# use the "confirm" button to save comments
+
+########################################
 
 observeEvent(input$saveCurrentEnv, {
   shiny.tt <<- shiny.r$data
@@ -144,39 +179,6 @@ observeEvent(input$ttcheck, {
     output$suggest <- renderText({
       paste(suggestion[sug.idx], collapse = "\n")
     })
-  }
-})
-
-
-
-
-# upload rds file
-volumes <- c(Home = fs::path_wd(), "R Installation" = R.home(), getVolumes()())
-shinyFileChoose(input, "file1", roots = volumes, session = session)
-observeEvent(input$file1, {
-  if(!is.integer(input$file1)) {
-    file <- parseFilePaths(volumes, input$file1)
-    req(file)
-    ext <- tools::file_ext(file$datapath)
-    
-    if(ext != "rds") {
-      output$file1_prompt <- renderText({
-        paste("Please upload a rds file.")
-      })
-    }
-    
-    validate(need(ext == "rds", "Please upload a rds file"))
-    show_modal_spinner(spin = "atom", text = "Loading rds files...")
-    
-    shiny.r$data <<- readRDS(file$datapath)
-    dataPar <<- data_CheckPar(isolate(shiny.r$data))
-    
-    remove_modal_spinner()
-    
-    output$file1_prompt <- renderText({
-      paste("finished loading the rds file.")
-    })
-    NOSHINY_TT <<- FALSE
   }
 })
 
@@ -273,9 +275,27 @@ observeEvent(input$updateCC, {
     cat("Bullet ID is not available. \n")
   }
   output$ccvalue <- renderText({
-    cat("test1")
+    # cat("test1")
     paste("Current Crosscut Value: ", shiny.r$data$crosscut[kk()]) })
   
+  # shiny.r$data$changed_crosscut[k] <<- 'TRUE'
+  
+})
+
+# Event: check if the crosscuts are changed
+observeEvent(input$cc_status, {
+  
+  show_modal_spinner(spin = "atom", text = "Checking...")
+  
+  if(!assertthat::has_name(shiny.r$data, "crosscut_auto")) {
+    shiny.r$data <<- shiny.r$data %>% mutate(
+      crosscut_auto = x3p %>% purrr::map_dbl(.f = x3p_crosscut_optimize)
+    ) 
+  }
+  
+  shiny.r$data$changed_crosscut <<- as.character(shiny.r$data$crosscut != shiny.r$data$crosscut_auto)
+
+  remove_modal_spinner()
 })
 
 # EVENT: DRAW SIGNATURE
@@ -373,17 +393,43 @@ observeEvent(input$k, {
 })
 
 
-# EVENT: INPUT CROSSCUT VALUE WITH TEXT
-observeEvent(input$cc, {
-  updateSliderInput(session, "cc_slide", "change crosscut with a slider",
-                    min = 0, max = 1000,
-                    value = as.numeric(input$cc), step = 0.1)
-})
-# EVENT: INPUT CROSSCUT VALUE WITH SLIDER
-observeEvent(input$cc_slide, {
-  updateNumericInput(session, "cc", "change crosscut to:",
-                     as.numeric(input$cc_slide), min = 0, max = 1000)
-})
+# # EVENT: INPUT CROSSCUT VALUE WITH TEXT
+# observeEvent(input$cc, {
+#   updateSliderInput(session, "cc_slide", "change crosscut with a slider",
+#                     min = 0, max = 1000,
+#                     value = as.numeric(input$cc), step = 0.1)
+# })
+# # EVENT: INPUT CROSSCUT VALUE WITH SLIDER
+# observeEvent(input$cc_slide, {
+#   updateNumericInput(session, "cc", "change crosscut to:",
+#                      as.numeric(input$cc_slide), min = 0, max = 1000)
+# })
+
+# SAVE CSV
+output$save_csv <- downloadHandler(
+  filename = function() {
+    paste("my_output.csv")
+  },
+  content = function(file) {
+    tmp <- isolate(shiny.r$data)
+    if(!assertthat::has_name(tmp, "scan_id")) { tmp$scan_id <- NA }
+    if(!assertthat::has_name(tmp, "crosscut_auto")) { tmp$crosscut_auto <- NA }
+    if(!assertthat::has_name(tmp, "changed_crosscut")) { tmp$changed_crosscut <- NA }
+    tmp$study <- isolate(input$save_csv_study_name)
+    tmp$manual_code <- isolate(input$save_csv_id)
+    tmp$manual_rep <- 1
+    tmp$groove_left_manual <- sapply(tmp$grooves, function(g) {g$groove[1]} )
+    tmp$groove_right_manual <- sapply(tmp$grooves, function(g) {g$groove[2]} )
+    
+    csv_tmp <- tmp %>% select(study, source, scan_id, crosscut, 
+                              manual_code, manual_rep, 
+                              groove_left_manual, groove_right_manual,
+                              type, comments, crosscut_auto, changed_crosscut)
+    # cat("good?", file)
+    write.csv(csv_tmp, file)
+    
+  }
+)
 
 
 

@@ -197,6 +197,7 @@ prepare_tt_Server <- function(id, data, userdir) {
           }
           
           tmp <- tmp %>% mutate(crosscut = x3p %>% purrr::map_dbl(.f = x3p_crosscut_optimize))
+          tmp$crosscut_auto <- tmp$crosscut
           
           tmp <- tmp %>% mutate(ccdata = purrr::map2(.x = x3p, .y = crosscut,
                                                      .f = x3p_crosscut))

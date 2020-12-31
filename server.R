@@ -16,11 +16,61 @@ server = function(input, output, session) {
   ################ important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   source("inst/R/server_main.R", local = TRUE)
   
+  # if shiny.tt exits in the current environment, add a comment
+  interpolate(~("# abv"),
+              mydir = userdir,
+              `_env` = environment(),
+              file = "code_x3p.R",
+              append = TRUE, eval = FALSE)
+  
+  
+  # upload from rds file
+  volumes <- c(Home = fs::path_wd(), "R Installation" = R.home(), getVolumes()())
+  shinyFileChoose(input, "file1", roots = volumes, session = session)
+  observeEvent(input$file1, {
+    if(!is.integer(input$file1)) {
+      file <- parseFilePaths(volumes, input$file1)
+      req(file)
+      ext <- tools::file_ext(file$datapath)
+      
+      if(ext != "rds") {
+        output$file1_prompt <- renderText({
+          paste("Please upload a rds file.")
+        })
+      }
+      
+      validate(need(ext == "rds", "Please upload a rds file"))
+      show_modal_spinner(spin = "atom", text = "Loading rds files...")
+      
+      # initialize shiny.r
+      shiny.r$data <<- readRDS(file$datapath)
+      dataPar <<- data_CheckPar(isolate(shiny.r$data))
+      if(!assertthat::has_name(shiny.r$data, "type")) { shiny.r$data$type <<- 'NA' }
+      if(!assertthat::has_name(shiny.r$data, "comments")) { shiny.r$data$comments <<- '' }
+      # if(!assertthat::has_name(shiny.r$data, "changed_crosscut")) { shiny.r$data$changed_crosscut <<- 'FALSE' }
+      
+      remove_modal_spinner()
+      
+      output$file1_prompt <- renderText({
+        paste("finished loading the rds file.")
+      })
+      NOSHINY_TT <<- FALSE
+      
+      interpolate(~(bullet <- readRDS(dir)),
+                  dir = file$datapath,
+                  mydir = userdir,
+                  `_env` = environment(),
+                  file = "code_x3p.R",
+                  append = TRUE, eval = FALSE)
+      
+    }
+  })
+  
   ###################################
   ## x3p tag related
   ###################################
   
-  # upload x3p folder
+  # upload from x3p folder
   shinyDirChoose(input, "x3pdir", roots = volumes, session = session, 
                  restrictions = system.file(package = "base"))
   observeEvent(input$x3pdir, {
@@ -29,8 +79,12 @@ server = function(input, output, session) {
       
       show_modal_spinner(spin = "atom", text = "Loading x3p files...")
       
+      # initialize shiny.r
       shiny.r$data <<- try(read_bullet(dir))
       dataPar <<- try(data_CheckPar(isolate(shiny.r$data)))
+      shiny.r$data$type <<- 'NA'
+      shiny.r$data$comments <<- ''
+      # shiny.r$data$changed_crosscut <<- 'FALSE'
       
       remove_modal_spinner()
       
@@ -64,7 +118,7 @@ server = function(input, output, session) {
   
   x3p_init(userdir, "code_x3p.R")
   # cat(userdir)
-  x3p_flip_yServer("x3p_flip", reactive(shiny.r$data), userdir) 
+  x3p_flip_yServer("x3p_flip", reactive(shiny.r$data), userdir)
   x3p_sampleServer("x3p_sample", reactive(shiny.r$data), userdir)
   x3p_mtomumServer("x3p_m_to_mum", reactive(shiny.r$data), userdir)
   x3p_rotateServer("x3p_rotate", reactive(shiny.r$data), userdir)
@@ -80,7 +134,7 @@ server = function(input, output, session) {
       x3p_init(userdir, "code_x3p.R")
     }
     
-    init_code_all_R(userdir)
+    init_code_all_R(userdir, NOSHINY_TT)
     cat(paste0("\n\n", paste(readLines(file.path(userdir, "code_x3p.R")), collapse = "\n")),
         file = file.path(userdir, "code_All.R"), append = TRUE)
   })
@@ -88,12 +142,12 @@ server = function(input, output, session) {
   
   ###########???
   ##############
-  # output$mydownload <- downloadHandler(
-  #   filename = function() {  paste("bynvtgR_report-", Sys.Date(), ".R", sep="") },
-  #   content = function(file) { 
-  #     NULL
-  #   }
-  # )
+  output$download_codes <- downloadHandler(
+    filename = function() {  paste("output_codes.R") },
+    content = function(file) {
+      file.copy(file.path(userdir, "code_All.R"), file)
+    }
+  )
   
   
 }

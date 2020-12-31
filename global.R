@@ -23,9 +23,9 @@ userdir <- tempfile()
 dir.create(userdir, recursive = TRUE)
 sapply(file.path(userdir, dir(userdir)[grep("code_", dir(userdir))]), file.remove)
 
-source("R/global_helper.R", local = TRUE)
+# cat(fs::path_wd())
 
-init_code_all_R(userdir)
+source("R/global_helper.R", local = TRUE)
 
 if (!exists("shiny.tt")) {
   shiny.tt <- tibble()
@@ -35,6 +35,15 @@ if (!exists("shiny.tt")) {
   NOSHINY_TT <- FALSE
   # LOADED_SHINY_TT <- FALSE
 }
+
+init_code_all_R(userdir, NOSHINY_TT)
+
+if(!NOSHINY_TT) {
+  if(!assertthat::has_name(shiny.tt, "type")) { shiny.tt$type <- 'NA' }
+  if(!assertthat::has_name(shiny.tt, "comments")) { shiny.tt$comments <- '' }
+
+}
+
 
 shiny.r <- reactiveValues(data = shiny.tt)
 dataPar <- data_CheckPar(isolate(shiny.r$data))
