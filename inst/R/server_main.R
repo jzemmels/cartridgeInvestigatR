@@ -21,7 +21,8 @@ output$selectk <- renderUI({
   # cat("render k select, using:", kk(),"\n")
   if(kk() <= dataPar$n) {
     selectInput("k","Investigate kth land:", selected = kk(),
-                choices=1:dataPar$n)
+                choices=1:dataPar$n,
+                width = "100%")
   } else {
     NULL
   }
@@ -33,7 +34,8 @@ output$selectid <- renderUI({
   if(dataPar$hasname_scanid & kk() <= dataPar$n) {
     selectInput("scanID","Investigate according to the Scan ID :",
                 selected = dataPar$all_scan_id[kk()],
-                choices = dataPar$all_scan_id)
+                choices = dataPar$all_scan_id,
+                width = "100%")
   } else {
     NULL
   }
@@ -104,7 +106,7 @@ output$x3p_type_select_ui <- renderUI({
   if(kk() <= dataPar$n) {
     selectInput("x3p_type","type:", selected = shiny.r$data$type[kk()],
                 choices=c("NA", "type1-regular", "type2-tankrashed", "type3-damaged",
-                          "type4-too many missing values"))
+                          "type4-too many missing values", "mark"))
   } else {
     NULL
   }
@@ -119,7 +121,7 @@ observeEvent(input$x3p_type, {
 output$x3p_comment_box_ui <- renderUI({
   if(kk() <= dataPar$n) {
     textAreaInput("x3p_comment_box", "Your Comments", value = shiny.r$data$comments[kk()],
-                  rows = 2)
+                  rows = 2, width = "100%")
   } else {
     NULL
   }
@@ -430,6 +432,23 @@ output$save_csv <- downloadHandler(
     
   }
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

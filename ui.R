@@ -1,6 +1,8 @@
 ui <- dashboardPage(
+
   dashboardHeader(title = "bulletinvestigatR",
                   titleWidth = 300),
+  
   dashboardSidebar(
     sidebarMenu(
       HTML(paste0(
@@ -9,12 +11,12 @@ ui <- dashboardPage(
         "<br>",
         "<a href='https://github.com/heike/bulletxtrctr/'><p style='text-align:center'>bulletxtrctr</p></a>"
       )),
-      menuItem("Information", tabName = "info", icon = icon("info")),
-      menuItem("Investigation", tabName = "investigation", icon = icon("pencil-ruler")),
-      menuItem("Data Preparation", icon = icon("table"), startExpanded = FALSE,
-               menuSubItem("x3p", tabName = "x3pp"),
-               menuSubItem("Crosscut", tabName = "crosscut"),
-               menuSubItem("Grooves", tabName = "grooves"))
+      menuItem("Introduction", tabName = "info", icon = icon("info")),
+      menuItem("Data", icon = icon("table"), tabName = "data_related"),
+      menuItem("Analysis", icon = icon("pencil-ruler"), startExpanded = TRUE,
+               menuSubItem("Bullet Land Inspection", tabName = "investigation"),
+               menuSubItem("Signature Comparison", tabName = "sig_compare"))
+      
     )
   ),
   dashboardBody(
@@ -36,156 +38,320 @@ ui <- dashboardPage(
               p("- plug in different modules to extend the functionality of this APP"),
               p("- modules are essentially functions(x3ptools, bulletxtrctr) calls"),
               
-              actionButton("ttcheck", "Check if the app is ready for investigation", icon = icon("search")),
-              verbatimTextOutput("checkresult"),
-              verbatimTextOutput("suggest"),
-              shinyFilesButton("file1", "Select a rds file (your bullet object)", 
-                               "Please select a rds file (your bullet object); column x3p/grooves is expected", 
-                               multiple = FALSE, viewtype = "detail"),
-              verbatimTextOutput("file1_prompt")
+
+              
+      ),
+      
+      # Second tab content
+      tabItem(tabName = "data_related",
+              h2("play with x3p files"),
+              
+              tabsetPanel(
+                      tabPanel("Import",
+                               
+                               br(),
+                               br(),
+                               
+                               box(
+                                 shinyDirButton("x3pdir", "Select a folder containing x3p files", "Upload"),
+                                 p("some text..."), 
+                                 width = NULL, title = "Import x3p", solidHeader = TRUE),
+                               
+                               box(
+                                 shinyFilesButton("file1", "Select a rds file (your bullet object)", 
+                                                  "Please select a rds file (your bullet object); column x3p/grooves is expected", 
+                                                  multiple = FALSE, viewtype = "detail"),
+                                 verbatimTextOutput("file1_prompt"),
+                                 width = NULL, title = "Import rds", solidHeader = TRUE),
+                               
+                               box(
+                                 p("If your create shiny.tt in your current environment ..."),
+                                 width = NULL, title = "From R Session", solidHeader = TRUE),
+                               
+                               ),
+                      tabPanel("x3p",
+                               
+                               br(),
+                               br(),
+                               
+                               fluidRow(
+                                 box(fluidRow(column(3,
+                                            conditionalPanel(
+                                              condition = "output.hasname_x3p",
+                                              actionButton("displayx3p2", "Display x3p image")
+                                              ))
+                                            ),
+                                     width = 12
+                                     )
+                               ),
+                               
+                               fluidRow(
+                                 box(x3pActionButtonUI("x3p_show_xml", "Show x3p size"),
+                                     width = 12)
+                               ),
+                               
+                               fluidRow(
+                                 box(x3pActionButtonUI("x3p_flip", "Flip y!"),
+                                     width = 12)
+                               ),
+                               
+                               fluidRow(
+                                 box(x3p_sampleUI("x3p_sample", "Compute x3p_sample"),
+                                     width = 12)
+                               ),
+                               
+                               fluidRow(
+                                 box(x3pActionButtonUI("x3p_m_to_mum", "Change m to mum"),
+                                     width = 12)
+                               ),
+                               
+                               fluidRow(
+                                 box(x3p_rotateUI("x3p_rotate", "Rotate the x3p file"),
+                                     actionButton("nnthing1", "Click for nothing 2"),
+                                     width = 12)
+                               )
+                               
+                               ),
+                      
+                      tabPanel("Prepare and Check",
+                               
+                               br(),
+                               br(),
+                               
+                               box(
+                                 x3pActionButtonUI("prepare_shinytt", "Prepare the data for investigation!"),
+                                 p("This might take some time. We are computing crosscut, ccdata, and 
+                                 grooves from your x3p files ..."),
+                                 
+                                 width = NULL
+                               ),
+                               
+                               box(
+                                 actionButton("ttcheck", "Check if the app is ready for investigation", 
+                                              icon = icon("search")),
+                                 verbatimTextOutput("checkresult"),
+                                 verbatimTextOutput("suggest"),
+                                 
+                                 width = NULL
+                                 
+                               ),
+                               
+                               )
+                      
+
+              ),
+              
+              fluidRow(
+                column(4,
+                       box(
+                         actionButton("updateCode", "update code", width = "100%",
+                                      style="white-space: normal;text-align:center;"),
+                         br(),
+                         actionButton("clean_code_window", "clean codes and the loaded object", 
+                                      width = "100%", style="white-space: normal;text-align:center;"),
+                         br(),
+                         downloadButton("download_codes", label = "Download R codes"),
+                         
+                         width = NULL
+                         )
+                       
+                ),
+                
+                column(8,
+                       aceEditor("myEditor", "", mode = "r", readOnly = TRUE, theme = "chrome")
+                )
+              ),
+              
+              
+              rglwidgetOutput("x3prgl2"),
+              
+              
       ),
       
       # First tab content
       tabItem(tabName = "investigation",
-              h3("Select a Bullet Land"),
+              # h3("Select a Bullet Land"),
               
-              fluidRow(
-                column(width = 4,
-                       box(width = NULL, background = NULL, height = 100,
-                           uiOutput("selectk"))
-                ),
+              tabsetPanel(
                 
-                column(width = 4,
-                       box(width = NULL, background = NULL, height = 100,
-
-                           uiOutput("selectid")
-                       )
-                ),
-                column(width = 4,
-                       downloadButton("downloadData", "Save the Processed Data as a RDS file.",
-                                      style="white-space: normal;text-align:center;"),
-                       p("It might take a few seconds to prepare for the saving."),
-                       textInput("save_csv_id", "Your Manual Code", value = "", width = NULL,
-                                 placeholder = TRUE),
-                       textInput("save_csv_study_name", "Name of the Study", value = "", width = NULL,
-                                 placeholder = TRUE),
-                       downloadButton("save_csv", "Output a CSV file",
-                                      style="white-space: normal;text-align:center;")
-                )
-              ),
-              
-              h3("Display Crosscut Data to Identify Grooves"),
-              
-              fluidRow(
-                column(width = 3,
-                       conditionalPanel(
-                         condition = "output.hasname_x3p",
-                         actionButton("displayx3p", "Display x3p image")
-                       )),
-                column(width = 9, 
-                       actionButton("confirm", "Confirm"),
-                       actionButton("mark", "Mark"),
-                       actionButton("unmark", "Unmark"),
-                       uiOutput("x3p_type_select_ui"),
-                       uiOutput("x3p_comment_box_ui"),
-                       # textAreaInput("x3p_comment_box", "comments", rows = 2, value = "abdc"),
-                       # actionButton("save_comment", "Save Comments")
-                       )
-
-                
-              ),
-              
-              fluidRow(
-                column(width = 3,
-                       conditionalPanel(
-                         condition = "output.hasname_x3p",
-                         box(width = NULL,
-                             textOutput("ccvalue"),
-                             numericInput("cc", "change crosscut to:", 100, min = 0, max = 1000),
-                             # sliderInput("cc_slide", "change crosscut with a slider:",
-                             #             min = 0, max = 1000,
-                             #             value = 100, step = 0.1),
-                             actionButton("updateCC", "Update Crosscut Value", width = "100%",
-                                          style="white-space: normal;text-align:center;"),
-                             actionButton("cc_status", "Check Crosscuts", width = "100%",
-                                          style="white-space: normal;text-align:center;")
+                tabPanel("Main",
+                         
+                         fluidRow(
+                           column(6,
+                                  uiOutput("selectk")
+                                  ),
+                           
+                           column(6,
+                                  uiOutput("selectid")
+                                  ),
+                           
+                           width = NULL
+                           
                          ),
-                         actionButton("saveCurrentEnv", "Save your progress!"),
-                         textOutput("saveptp")
-                       )),
+                         
+                         fluidRow(
+                           column(9,
+                                  textOutput("groovelocations"),
+                                  plotOutput("groovePlot", click = "plot_click", height="300px"),
+                                  
+                                  column(9,
+                                         uiOutput("x3p_type_select_ui"),
+                                         uiOutput("x3p_comment_box_ui")
+                                         ),
+                                  
+                                  column(3,
+                                         br(),
+                                         actionButton("confirm", "Confirm", 
+                                                      style="white-space: normal;text-align:center;")
+                                         )
+                                  
+                                  
+                                  ),
+                           
+                           column(3, offset = 0,
+                                  box(
+                                    conditionalPanel(
+                                      condition = "output.hasname_x3p",
+                                      actionButton("displayx3p", "Display x3p image", width = "100%",
+                                                   style="white-space: normal;text-align:center;") %>%
+                                        helper(type = "inline",
+                                               title = "Inline Help",
+                                               content = c("This helpfile is defined entirely in the UI!",
+                                                           "This is on a new line.",
+                                                           "This is some <b>HTML</b>."),
+                                               size = "s"),
+                                      br(),
+                                      
+                                      textOutput("ccvalue"),
+                                      numericInput("cc", "change crosscut to:", 100, min = 0, max = 1000),
+                                      actionButton("updateCC", "Update Crosscut Value", width = "100%",
+                                                   style="white-space: normal;text-align:center;") %>% 
+                                        helper(type = "markdown",
+                                               content = "test"),
+
+                                      
+                                      actionButton("drawsig", "Draw Signature", width = "100%",
+                                                   style="white-space: normal;text-align:center;")
+                                      
+                                    ),
+                                    width = NULL)
+                                  )
+                         ),
+                         
+                         fluidRow(
+                           actionButton("saveCurrentEnv", "Save your progress!", width = "100%",
+                                        style="white-space: normal;text-align:center;"),
+                           br(),
+                           textOutput("saveptp")
+
+                         ),
+                         
+                         fluidRow(
+                           column(9,
+                                  conditionalPanel(
+                                    condition = "output.hasname_x3p",
+                                    plotOutput("sigPlot", height = "300px")
+                                  )
+                                  
+                                  )
+                           
+                         ),
+                         
+                         fluidRow(
+                           rglwidgetOutput("x3prgl")
+                         )
+                         
+                         
+                         
+                         ),
                 
-                column(width = 9,
-                       textOutput("groovelocations"),
-                       plotOutput("groovePlot", click = "plot_click", height="300px"),
-                       br(),
-                       conditionalPanel(
-                         condition = "output.hasname_x3p",
-                         actionButton("drawsig", "Draw Signature", 
-                                      style="white-space: normal;text-align:center;"),
-                         br(),
-                         plotOutput("sigPlot", height = "300px")
-                       ))
+                tabPanel("Output",
+                         
+                         box(
+                           textInput("save_csv_id", "Your Manual Code", value = "", width = NULL,
+                                     placeholder = TRUE),
+                           textInput("save_csv_study_name", "Name of the Study", value = "", width = NULL,
+                                     placeholder = TRUE),
+                           actionButton("cc_status", "Check Crosscuts", width = "100%",
+                                        style="white-space: normal;text-align:center;"),
+                           downloadButton("save_csv", "Output a CSV file",
+                                          style="white-space: normal;text-align:center;"),
+                           width = NULL, title = "Output as a csv file", solidHeader = TRUE),
+                         
+                         box(downloadButton("downloadData", "Save the Processed Data as a RDS file.",
+                                            style="white-space: normal;text-align:center;"),
+                             p("It might take a few seconds to prepare for the saving."),
+                             width = NULL, title = "Output as a rds file", solidHeader = TRUE)
+                         
+                         )
+                
               ),
               
-              fluidRow(
-                rglwidgetOutput("x3prgl")
-              )
       ),
       
-      # Second tab content
-      tabItem(tabName = "x3pp",
-              h2("play with x3p files"),
 
-              sidebarPanel(
-                shinyDirButton("x3pdir", "Select a folder containing x3p files", "Upload"),
-                
-                conditionalPanel(
-                  condition = "output.hasname_x3p",
-                  actionButton("displayx3p2", "Display x3p image")
-                ),
-                
-                actionButton("updateCode", "update code"),
-                actionButton("clean_code_window", "clean all the code"),
-                
-                x3pActionButtonUI("prepare_shinytt", "Prepare the data for investigation!"),
-                
-                downloadButton("download_codes", label = "Download R codes")
+      
+      tabItem(tabName = "sig_compare",
+              h2("Compute two signatures"),
+              
+              box(
+                uiOutput("sig1_select"),
+                actionButton("sig1_display", "Display x3p"),
+                actionButton("sig1_draw", "Draw Signature"),
+                plotOutput("sig1_plot", height = "300px"),
+                width = NULL
               ),
               
-              mainPanel(
-                column(width = 6,
-                       box(
-                         x3pActionButtonUI("x3p_show_xml", "Show x3p size")
-                       ),
-                       box(
-                         x3pActionButtonUI("x3p_flip", "Flip y!")
-                       ),
-                       
-                       box(
-                         x3p_sampleUI("x3p_sample", "Compute x3p_sample")
-                       )
-                ),
+              box(
+                uiOutput("sig2_select"),
+                actionButton("sig2_display", "Display x3p"),
+                actionButton("sig2_draw", "Draw Signature"),
+                plotOutput("sig2_plot", height = "300px"),
+                width = NULL
+              ),
+              
+              box(
+                numericInput("sig1_align_num", "Shift signature 1 (red)", 0, min = -5000, max = 5000),
+                numericInput("sig2_align_num", "Shift signature 2 (blue)", 0, min = -5000, max = 5000),
                 
-                column(width = 6,
-                       box(x3pActionButtonUI("x3p_m_to_mum", "Change m to mum")), 
-                       box(x3p_rotateUI("x3p_rotate", "Rotate the x3p file"))),
+                actionButton("sig_align", "Align two signatures"),
+                plotOutput("sig_align_plot", height = "300px"),
+                
+                width = NULL
                 
               ),
-
-              aceEditor("myEditor", "", mode = "r", readOnly = TRUE, theme = "chrome"),
               
-              rglwidgetOutput("x3prgl2")
-              
-
-      ),
-      
-      tabItem(tabName = "crosscut",
-              h2("Compute crosscuts and ccdata")
-      ),
-      
-      tabItem(tabName = "grooves",
-              h2("Compute grooves")
+              rglwidgetOutput("sig1_display_rgl"),
+              rglwidgetOutput("sig2_display_rgl")
       )
+      
     )
   )
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

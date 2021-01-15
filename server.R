@@ -1,5 +1,7 @@
 server = function(input, output, session) {
   
+  observe_helpers(withMathJax = FALSE)
+  
   ## Update directory
   newuserdir <- tempfile()
   dir.create(newuserdir, recursive = TRUE)
@@ -15,13 +17,14 @@ server = function(input, output, session) {
   # check the location after installation of the package
   ################ important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   source("inst/R/server_main.R", local = TRUE)
+  source("inst/R/server_sig_compare.R", local = TRUE)
   
   # if shiny.tt exits in the current environment, add a comment
-  interpolate(~("# abv"),
-              mydir = userdir,
-              `_env` = environment(),
-              file = "code_x3p.R",
-              append = TRUE, eval = FALSE)
+  # interpolate(~("# abv"),
+  #             mydir = userdir,
+  #             `_env` = environment(),
+  #             file = "code_x3p.R",
+  #             append = TRUE, eval = FALSE)
   
   
   # upload from rds file
@@ -112,8 +115,11 @@ server = function(input, output, session) {
   observeEvent(input$clean_code_window, {
     shiny.r <<- reactiveValues(data = tibble())
     dataPar <<- data_CheckPar(isolate(shiny.r$data))
+    
+    NOSHINY_TT <<- TRUE
+    
     sapply(file.path(userdir, dir(userdir)[grep("code_", dir(userdir))]), file.remove)
-    init_code_all_R(userdir)
+    init_code_all_R(userdir, NOSHINY_TT)
   })
   
   x3p_init(userdir, "code_x3p.R")

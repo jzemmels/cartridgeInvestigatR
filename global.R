@@ -11,6 +11,8 @@ library(bulletxtrctr)
 library(shinybusy)
 library(shinyAce)
 library(formatR)
+library(shinyhelper)
+# library(rintrojs)
 
 
 options(shiny.maxRequestSize=2*1024^3,
@@ -48,10 +50,15 @@ if(!NOSHINY_TT) {
 shiny.r <- reactiveValues(data = shiny.tt)
 dataPar <- data_CheckPar(isolate(shiny.r$data))
 
+global_sig1 <- c()
+global_sig2 <- c()
+
 onStop(function() {
   rm(shiny.r, envir = globalenv())
   rm(NOSHINY_TT, envir = globalenv())
   rm(dataPar, envir = globalenv())
+  rm(global_sig1, envir = globalenv())
+  rm(global_sig2, envir = globalenv())
   if(nrow(shiny.tt) == 0) { rm(shiny.tt, envir = globalenv()) }
 })
 

@@ -3,13 +3,26 @@ x3p_init <- function(userdir, filename) {
 }
 
 
-x3pActionButtonUI <- function(id, label = "Click me!") {
+x3pActionButtonUI <- function(id, label = "Click me!", col1 = 3, col2 = 8, offset = 1) {
   ns <- NS(id)
   
+  # tagList(
+  #   actionButton(ns("compute_button"), label),
+  #   verbatimTextOutput(ns("text_window"))
+  # )
+  # fluidRow(
+  #   column(col1,
+  #          actionButton(ns("compute_button"), label)),
+  #   column(col2, offset = offset,
+  #          verbatimTextOutput(ns("text_window")))
+  # 
+  # )
   tagList(
     actionButton(ns("compute_button"), label),
+    br(),
     verbatimTextOutput(ns("text_window"))
   )
+  
 }
 
 x3p_flip_yServer <- function(id, data, userdir) {
