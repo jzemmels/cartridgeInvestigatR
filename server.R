@@ -1,3 +1,6 @@
+library(patchwork)
+library(cmcR)
+
 server = function(input, output, session) {
   
   observe_helpers(withMathJax = FALSE)
@@ -124,12 +127,18 @@ server = function(input, output, session) {
   
   x3p_init(userdir, "code_x3p.R")
   # cat(userdir)
-  x3p_flip_yServer("x3p_flip", reactive(shiny.r$data), userdir)
-  x3p_sampleServer("x3p_sample", reactive(shiny.r$data), userdir)
-  x3p_mtomumServer("x3p_m_to_mum", reactive(shiny.r$data), userdir)
-  x3p_rotateServer("x3p_rotate", reactive(shiny.r$data), userdir)
+  # x3p_flip_yServer("x3p_flip", reactive(shiny.r$data), userdir)
+  # x3p_sampleServer("x3p_sample", reactive(shiny.r$data), userdir)
+  # x3p_mtomumServer("x3p_m_to_mum", reactive(shiny.r$data), userdir)
+  # x3p_rotateServer("x3p_rotate", reactive(shiny.r$data), userdir)
   x3p_show_xmlServer("x3p_show_xml", reactive(shiny.r$data), userdir)
-  prepare_tt_Server("prepare_shinytt", reactive(shiny.r$data), userdir)
+  prepare_tt_Server("prepare_shinytt", reactive(shiny.r$data %>%
+                                                  mutate(initialDownsample = input$initialDownsample,
+                                                         exteriorCrop = input$exteriorCrop,
+                                                         interiorCrop = input$interiorCrop,
+                                                         gaussFilterLow = input$gaussFilterLow,
+                                                         gaussFilterHigh = input$gaussFilterHigh,
+                                                         finalDownsample = input$finalDownsample)), userdir)
   
   ###################################
   # plug in other modules (functions)
