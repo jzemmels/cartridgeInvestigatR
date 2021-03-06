@@ -241,7 +241,7 @@ ui <- dashboardPage(
                                                value = 64,
                                                min = 1),
                                   numericInput(inputId = "maxNonMissingProp",
-                                               label = "Max. Proportion of NAs Per Cell",
+                                               label = "Max. Proportion of NAs per Cell",
                                                value = .85,
                                                min = 0,
                                                max = 1),
