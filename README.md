@@ -82,3 +82,4 @@ Visualize the CMCs identified by the High CMC method. Below the CMC plots are th
 We can see below that the comparison in which K004dD1 was partitioned into a grid of cells and compared to regions in K004dD3 yielded 15 High CMCs (under the specified thresholds). We can see that the CMC-`theta` distribution attains a mode around -9 degrees. Additionally, the `theta` values with "High CMC" counts (defined to be at least 13 - 1 =  12 CMCs) are within the `Rotation Threshold (deg)` value specified (6 degrees). Thus, this direction "passes" the CMC criteria. For sake of space, the 13 High CMCs identified when K004dD3 is partitioned into a grid of cells and compared to regions in K004dD1 are not shown.
 
 ![](images/highCMC.PNG)
+

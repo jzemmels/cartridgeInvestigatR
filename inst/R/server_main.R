@@ -1707,8 +1707,8 @@ observeEvent({input$target_click},
                    
                    translatedCenter <- dim(..8$surface.matrix)/2 - c(..3,-1*..4)
                    
-                   minRowCol <- (translatedCenter - dim(..7$surface.matrix))*..8$header.info$incrementX
-                   maxRowCol <- (translatedCenter + dim(..7$surface.matrix))*..8$header.info$incrementX
+                   minRowCol <- (translatedCenter - dim(..7$surface.matrix)/2)*..8$header.info$incrementX
+                   maxRowCol <- (translatedCenter + dim(..7$surface.matrix)/2)*..8$header.info$incrementX
                    
                    region_df <- x3p_to_df(..8) %>%
                      mutate(x = max(x) - x,
