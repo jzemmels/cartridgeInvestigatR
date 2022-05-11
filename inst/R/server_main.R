@@ -451,7 +451,7 @@ observeEvent(input$x3pdir,{
 # observeEvent({input$rotationselection},
 #              {
 #                
-#                browser()
+#                
 #                
 #                updateNumericInput(inputId = "thetaRangeMin",value = NULL)
 #                updateNumericInput(inputId = "thetaRangeMax",value = NULL)
@@ -727,7 +727,7 @@ observeEvent(input$resetProcessing,
 observeEvent(input$skipPreprocessing,
              {
                
-               # browser()
+               # 
                shiny.r$data <<- shiny.r$data %>%
                  mutate(x3p_processed = x3p,
                         x3pNames = stringr::str_extract(source,"[^/]*$"))
@@ -1536,7 +1536,7 @@ observeEvent({input$reference_click},
                  }
                  else{
                    for(ind in 2:length(mostSimilarRegions)){
-                     plt <- plt + mostSimilarRegions[[ind]]
+                     plt <- plt / mostSimilarRegions[[ind]]
                    }
                    
                    return(plt)
@@ -1607,11 +1607,95 @@ observeEvent({input$reference_click},
                  }
                  else{
                    for(ind in 2:length(ccfMaps)){
-                     plt <- plt + ccfMaps[[ind]]
+                     plt <- plt / ccfMaps[[ind]]
                    }
                    
                    return(plt)
                  }
+                 
+               })
+               
+               output$postComparisonTarget <- renderPlot({
+                 
+                 target <- shiny.r$data$x3p_processed[[which(shiny.r$data$x3pNames == input$targetSelect)]]
+                 
+                 plt <- cmcR::x3pListPlot(list(target) %>%
+                                            magrittr::set_names(input$targetSelect),
+                                          type = "list")
+                 
+                 comparisonData <- comparisonData %>%
+                   # mutate(colIndex = as.integer(colIndex - numCellsRoot)) %>%
+                   filter(rowIndex == input$reference_click$panelvar2 & colIndex == input$reference_click$panelvar1)
+                 
+                 regionLocations <- comparisonData$regionHeightValues[1] %>%
+                   names() %>%
+                   stringr::str_extract_all("[0-9]{1,}") %>%
+                   unlist()
+                 
+                 browser()
+                 
+                 regionCenter <- c(mean(c(as.numeric(regionLocations[[3]]),as.numeric(regionLocations[[4]]))),
+                                   mean(c(as.numeric(regionLocations[[1]]),as.numeric(regionLocations[[2]]))))
+                 
+                 newCenter_dx <- cos(pi - sqrt(sum((target$header.info$incrementY*1e6)*regionCenter^2)) * sin(abs(comparisonData$theta)*pi/180)/sin(((180 - abs(comparisonData$theta))/2)*pi/180) - atan(abs(regionCenter[1]/regionCenter[2])))*
+                   sqrt(sum((target$header.info$incrementY*1e6)*regionCenter^2))*sin(abs(comparisonData$theta)*pi/180)/sin(((180 - comparisonData$theta)/2)*pi/180)
+                 
+                 newCenter_dy <- sin(pi - sqrt(sum((target$header.info$incrementY*1e6)*regionCenter^2)) * sin(abs(comparisonData$theta)*pi/180)/sin(((180 - abs(comparisonData$theta))/2)*pi/180) - atan(abs(regionCenter[1]/regionCenter[2])))*
+                   sqrt(sum((target$header.info$incrementY*1e6)*regionCenter^2))*sin(abs(comparisonData$theta)*pi/180)/sin(((180 - abs(comparisonData$theta))/2)*pi/180)
+                 
+                 comparisonData <- comparisonData %>% 
+                   dplyr::mutate(firstRow = regionCenter[1] - nrow(comparisonData$regionHeightValues[[1]]$surface.matrix)/2,
+                                 lastRow = regionCenter[1] + nrow(comparisonData$regionHeightValues[[1]]$surface.matrix)/2,
+                                 firstCol = ncol(target$surface.matrix) - regionCenter[2]- ncol(comparisonData$regionHeightValues[[1]]$surface.matrix)/2,
+                                 lastCol = ncol(target$surface.matrix) - regionCenter[2] + ncol(comparisonData$regionHeightValues[[1]]$surface.matrix)/2) %>%
+                   dplyr::mutate(firstRow = (target$header.info$incrementY*1e6)*(firstRow),
+                                 lastRow = (target$header.info$incrementY*1e6)*(lastRow),
+                                 firstCol = (target$header.info$incrementY*1e6)*(firstCol),
+                                 lastCol = (target$header.info$incrementY*1e6)*(lastCol)) %>%
+                   dplyr::mutate(firstRowCentered = firstRow - mean(c(firstRow,lastRow)),
+                                 lastRowCentered = lastRow - mean(c(firstRow,lastRow)),
+                                 firstColCentered = firstCol - mean(c(firstCol,lastCol)),
+                                 lastColCentered = lastCol - mean(c(firstCol,lastCol))) %>%
+                   dplyr::mutate(topLeftCorner_col = firstColCentered*cos((theta)*(pi/180)) - lastRowCentered*sin((theta)*(pi/180)) + mean(c(firstCol,lastCol)) - newCenter_dy,
+                                 topLeftCorner_row = firstColCentered*sin((theta)*(pi/180)) + lastRowCentered*cos((theta)*(pi/180)) + mean(c(firstRow,lastRow)) + newCenter_dx,
+                                 topRightCorner_col = lastColCentered*cos((theta)*(pi/180)) - lastRowCentered*sin((theta)*(pi/180)) + mean(c(firstCol,lastCol)) - newCenter_dy,
+                                 topRightCorner_row = lastColCentered*sin((theta)*(pi/180)) + lastRowCentered*cos((theta)*(pi/180)) + mean(c(firstRow,lastRow)) + newCenter_dx,
+                                 bottomRightCorner_col = lastColCentered*cos((theta)*(pi/180)) - firstRowCentered*sin((theta)*(pi/180)) + mean(c(firstCol,lastCol)) - newCenter_dy,
+                                 bottomRightCorner_row = lastColCentered*sin((theta)*(pi/180)) + firstRowCentered*cos((theta)*(pi/180)) + mean(c(firstRow,lastRow)) + newCenter_dx,
+                                 bottomLeftCorner_col = firstColCentered*cos((theta)*(pi/180)) - firstRowCentered*sin((theta)*(pi/180)) + mean(c(firstCol,lastCol)) - newCenter_dy,
+                                 bottomLeftCorner_row = firstColCentered*sin((theta)*(pi/180)) + firstRowCentered*cos((theta)*(pi/180)) + mean(c(firstRow,lastRow)) + newCenter_dx)  %>%
+                   dplyr::mutate(x_1 = .data$topLeftCorner_col,
+                                 y_1 = .data$topLeftCorner_row,
+                                 x_2 = .data$topRightCorner_col,
+                                 y_2 = .data$topRightCorner_row,
+                                 x_3 = .data$bottomRightCorner_col,
+                                 y_3 = .data$bottomRightCorner_row,
+                                 x_4 = .data$bottomLeftCorner_col,
+                                 y_4 = .data$bottomLeftCorner_row) %>%
+                   tidyr::pivot_longer(cols = tidyr::starts_with(c("x","y")),
+                                       names_to = c(".value","order"),
+                                       names_pattern = "(.+)_(.+)") %>%
+                   mutate(cellIndex = paste0(rowIndex,",",colIndex))
+                 
+                 
+                 plt[[1]] +
+                   geom_polygon(data = comparisonData,
+                                mapping = aes(x = x,
+                                              y = y,
+                                              group = cellIndex),
+                                colour = "black",
+                                fill = NA) +
+                   theme_replace(axis.title.x = ggplot2::element_blank(),
+                                 axis.text.x = ggplot2::element_blank(),
+                                 axis.ticks.x = ggplot2::element_blank(),
+                                 axis.title.y = ggplot2::element_blank(),
+                                 axis.text.y = ggplot2::element_blank(),
+                                 axis.ticks.y = ggplot2::element_blank(),
+                                 panel.grid.major = ggplot2::element_blank(),
+                                 panel.grid.minor = ggplot2::element_blank(),
+                                 panel.background = ggplot2::element_blank())
+                 
+                 
                  
                })
                
