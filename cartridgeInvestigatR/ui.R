@@ -4,7 +4,7 @@ library(shinydashboard)
 source("cartridgeInvestigatR_helpers.R")
 
 ui <- dashboardPage(
-    dashboardHeader(title = "cartridgeInvestigatR",
+  dashboardHeader(title = "cartridgeInvestigatR",
                     titleWidth = 300),
     
     dashboardSidebar(
@@ -16,16 +16,16 @@ ui <- dashboardPage(
                 "<a href='https://github.com/CSAFE-ISU/cmcR'><p style='text-align:center'>cmcR</p></a>"
             )),
             menuItem("0. Introduction", tabName = "info", icon = icon("info")),
-            menuItem("1. Preprocessing", icon = icon("table"), tabName = "data_related"),
+            menuItem("1. Preprocessing", icon = icon("scissors"), tabName = "data_related"),
             # menuItem("Analysis", icon = icon("pencil-ruler"), startExpanded = TRUE,
             #          menuSubItem("Comparison", tabName = "comparison"),
-            #          menuSubItem("Decision Rules", tabName = "decisionRule")),
+            #          menuSubItem("Scoring", tabName = "decisionRule")),
             menuItem("2. Comparison", tabName = "comparison",icon = icon("pencil-ruler")),
-            menuItem("3. Decision Rules", tabName = "decisionRule",icon = icon("filter"))
+            menuItem("3. Scoring", tabName = "decisionRule",icon = icon("stats",lib = "glyphicon"))
             
         )
     ),
-    dashboardBody(
+    dashboardBody(shinybusy::add_busy_spinner(spin = "circle",height = "75px",width = "75px",color = "black"),
         tags$script("
     Shiny.addCustomMessageHandler('resetValue', function(variableName) {
       Shiny.onInputChange(variableName, null);
@@ -43,30 +43,27 @@ ui <- dashboardPage(
                     h4("3. Click to the Comparison tab on the left. Plots will be created showing the selected Reference and Target scans, although this may take some time to load."),
                     h4("4. Select desired comparison parameters and click the Perform Comparison button. This may take some time to run depending on selected parameters."),
                     h4("5. Under the Comparison Results tab you can click on a particular cell to see some summary information of that cell's most similar regions in the paired scan (measured by the pairwise-complete correlation)."),
-                    h4("6. Click to the Decision Rules tab to see a visualziation of the CMCs identified under the Original Method and High CMC method."),
-                    br(),
+                    h4("6. Click to the Scoring tab to see a visualziation of the CMCs identified under the Original Method and High CMC method."),
+                    # br(),
                     h4("Following is a description of each tab:"),
                     h3(strong("1. Preprocessing")),
-                    tags$pre(h4(" Import: import a directory of scans."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- Click the Skip Preprocessing button to skip the preprocessing step."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4(" Initial X3P: visualize the imported X3Ps."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- The Focus on a Single X3P button allows you to manually specify the cartridge case center (single-click) the firing pin center (double-click) or remove parts of the scan (drag)."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4(" Preprocess: perform preprocessing procedures (note: this will be changed in the future to allow for custom preprocessing)"),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    br(),
+                    h4(" Import: import a directory of scans."),
+                    h4("\t- Click the Skip Preprocessing button to skip the preprocessing step."),
+                    # br(),
                     h3(strong("2. Comparison")),
-                    tags$pre(h4(" Comparison Parameters: set parameters used in the cell-based comparison procedure."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- Start the comparison procedure by clicking the Perform Comparison button at the bottom of the Comparison Parameters tab."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- Cells containing too many missing values (defined by Max. Proportion of NAs per Cell) will be grayed-out."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- By clicking Manually Enter Rotations, only those rotations entered in the Comma-Separated Rotation Values box will be considered."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4(" Comparison Results: visualize the cell/region comparisons."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- Click on a cell to visualize the 3 most similar regions (as measured by the Pairwise-Complete Correlation)."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- A cross-correlation map computed using the Cross-Correlation Theorem is shown below each region. These indicate how the translation values are estimated."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    br(),
-                    h3(strong("3. Decision Rules")),
-                    tags$pre(h4(" Original Method of Song (2013): visualize the CMCs identified under the Original Method of Song (2013)."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- The diagnostic plots show the x, y, theta, and CCF values at which each cell/region pair attained its CCF across all rotations considered in the comparison."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4(" High CMC Method: visualize the CMCs identified under the High CMC method."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-                    tags$pre(h4("\t- The diagnostic plot(s) show(s) the CMC-theta distribution used to identify High CMCs."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside"))
+                    h4(" Comparison Parameters: set parameters used in the cell-based comparison procedure."),
+                    h4("\t- Start the comparison procedure by clicking the Perform Comparison button at the bottom of the Comparison Parameters tab."),
+                    h4("\t- Cells containing too many missing values (defined by Max. Proportion of NAs per Cell) will be grayed-out."),
+                    h4("\t- By clicking Manually Enter Rotations, only those rotations entered in the Comma-Separated Rotation Values box will be considered."),
+                    h4(" Comparison Results: visualize the cell/region comparisons."),
+                    h4("\t- Click on a cell to visualize the 3 most similar regions (as measured by the Pairwise-Complete Correlation)."),
+                    h4("\t- A cross-correlation map computed using the Cross-Correlation Theorem is shown below each region. These indicate how the translation values are estimated."),
+                    # br(),
+                    h3(strong("3. Scoring")),
+                    h4(" Original Method of Song (2013): visualize the CMCs identified under the Original Method of Song (2013)."),
+                    h4("\t- The diagnostic plots show the x, y, theta, and CCF values at which each cell/region pair attained its CCF across all rotations considered in the comparison."),
+                    h4(" High CMC Method: visualize the CMCs identified under the High CMC method."),
+                    h4("\t- The diagnostic plot(s) show(s) the CMC-theta distribution used to identify High CMCs.")
                     
                     
                     
@@ -190,13 +187,13 @@ ui <- dashboardPage(
                                             # conditionalPanel("input.rotationselection == 'by range'",
                                             numericInput(inputId = "thetaRangeMin",
                                                          label = "Min. Rotation Value (deg)",
-                                                         min = -180,
-                                                         max = 180,
+                                                         min = -181,
+                                                         max = 181,
                                                          value = -30),
                                             numericInput(inputId = "thetaRangeMax",
                                                          label = "Max. Rotation Value (deg)",
-                                                         min = -180,
-                                                         max = 180,
+                                                         min = -181,
+                                                         max = 181,
                                                          value = 30),
                                             numericInput(inputId = "thetaStep",
                                                          label = "Rotation Step Size (deg)",
