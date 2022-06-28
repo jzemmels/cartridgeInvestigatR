@@ -237,6 +237,19 @@ preProcess_partial <- function(preProcStep,paramValues){
     
     
   }
+  if(preProcStep == "Delete"){
+    
+    return(purrr::partial(x3pDeleteMask,color = "#ff0000"))
+    
+  }
+  
+}
+
+x3pDeleteMask <- function(x3p,color = "#ff0000"){
+  
+  x3p$surface.matrix[x3p$mask == color] <- NA
+  
+  return(x3p)
   
 }
 
@@ -673,4 +686,134 @@ cmcPlot_colorChange <- function(reference,
   
   # return(patchwork::wrap_plots(refPlt,plt,cmcLegend,nrow = 2,heights = c(1,.1)))
   return(plt)
+}
+
+
+## Updated gganimate::draw_frames function that allows for a custom message in the progress  bar
+
+my_draw_frames <- function(plot, frames, device, ref_frame, update_progress = NULL, ...) {
+  stream <- device == 'current'
+  
+  dims <- tryCatch(
+    plot_dims(plot, ref_frame),
+    error = function(e) {
+      warning('Cannot get dimensions of plot table. Plot region might not be fixed', call. = FALSE)
+      list(widths = NULL, heights = NULL)
+    }
+  )
+  
+  dir <- tempfile(pattern = '')
+  dir.create(dir, showWarnings = FALSE)
+  files <- file.path(dir, sprintf('gganim_plot%04d', seq_along(frames)))
+  files <- switch(
+    tolower(device),
+    png = paste0(files, '.png'),
+    jpg = ,
+    jpeg = paste0(files, '.jpg'),
+    tif = ,
+    tiff = paste0(files, '.tif'),
+    bmp = paste0(files, '.bmp'),
+    svglite = ,
+    svg = paste0(files, '.svg'),
+    current = files,
+    stop('Unsupported device', call. = FALSE)
+  )
+  device <- switch(
+    device,
+    png = png,
+    jpg = ,
+    jpeg = jpeg,
+    tif = ,
+    tiff = tiff,
+    bmp = bmp,
+    svg = svg,
+    svglite = svglite::svglite
+  )
+  
+  pb <- progress_bar$new(
+    'Rendering [:bar] at :fps fps ~ eta: :eta',
+    total = length(frames)
+  )
+  start <- Sys.time()
+  pb$tick(0)
+  
+  for (i in seq_along(frames)) {
+    if (!stream) device(files[i], ...)
+    
+    tryCatch(
+      plot$scene$plot_frame(plot, frames[i], widths = dims$widths, heights = dims$heights),
+      error = function(e) {
+        warning(conditionMessage(e), call. = FALSE)
+      }
+    )
+    
+    rate <- i/as.double(Sys.time() - start, units = 'secs')
+    if (is.nan(rate)) rate <- 0
+    
+    # send update to shiny progress
+    if(is.function(update_progress)) {
+      frames_left <- length(frames) - i
+      projected_secs <- as.difftime(frames_left / rate, units = "secs")
+      eta <- prettyunits::vague_dt(projected_secs, format = "terse")
+      detail <- paste0("at ", format(rate, digits = 2), " fps ~ eta: ", eta)
+      update_progress(detail)
+    }
+    
+    rate <- format(rate, digits = 2)
+    pb$tick(tokens = list(fps = rate))
+    
+    if (!stream) dev.off()
+  }
+  
+  frame_vars <- plot$scene$frame_vars[frames, , drop = FALSE]
+  if (!stream) frame_vars$frame_source <- files
+  frame_vars
+}
+
+
+## keep a copy of the old draw_frames function to reset the namespace after the
+## animation is rendered
+old_draw_frames <- function (plot, frames, device, ref_frame, ...) 
+{
+  stream <- device == "current"
+  dims <- tryCatch(plot_dims(plot, ref_frame), error = function(e) {
+    warning("Cannot get dimensions of plot table. Plot region might not be fixed", 
+            call. = FALSE)
+    list(widths = NULL, heights = NULL)
+  })
+  dir <- tempfile(pattern = "")
+  dir.create(dir, showWarnings = FALSE)
+  files <- file.path(dir, sprintf("gganim_plot%04d", 
+                                  seq_along(frames)))
+  files <- switch(tolower(device), ragg_png = , png = paste0(files, 
+                                                             ".png"), jpg = , jpeg = paste0(files, ".jpg"), 
+                  tif = , tiff = paste0(files, ".tif"), bmp = paste0(files, 
+                                                                     ".bmp"), svglite = , svg = paste0(files, ".svg"), 
+                  current = files, stop("Unsupported device", call. = FALSE))
+  device <- switch(device, ragg_png = ragg::agg_png, png = png, 
+                   jpg = , jpeg = jpeg, tif = , tiff = tiff, bmp = bmp, 
+                   svg = svg, svglite = svglite::svglite)
+  pb <- progress_bar$new("Rendering [:bar] at :fps fps ~ eta: :eta", 
+                         total = length(frames))
+  start <- Sys.time()
+  pb$tick(0)
+  for (i in seq_along(frames)) {
+    if (!stream) 
+      device(files[i], ...)
+    tryCatch(plot$scene$plot_frame(plot, frames[i], widths = dims$widths, 
+                                   heights = dims$heights), error = function(e) {
+                                     warning(conditionMessage(e), call. = FALSE)
+                                   })
+    rate <- i/as.double(Sys.time() - start, units = "secs")
+    if (is.nan(rate)) 
+      rate <- 0
+    rate <- format(rate, digits = 2)
+    pb$tick(tokens = list(fps = rate))
+    if (!stream) 
+      dev.off()
+  }
+  frame_vars <- plot$scene$frame_vars[frames, , drop = FALSE]
+  if (!stream) 
+    frame_vars$frame_source <- files
+  frame_vars
 }
