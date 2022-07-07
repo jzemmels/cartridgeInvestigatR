@@ -12,19 +12,7 @@ library(ggiraph)
 
 server = function(input, output, session) {
   
-  ## load the main part of the server
-  # check the location after installation of the package
-  ################ important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  # source("inst/R/server_main.R", local = TRUE)
-  # source("inst/R/server_sig_compare.R", local = TRUE)
   source("cartridgeInvestigatR_helpers.R")
-  
-  # if shiny.tt exits in the current environment, add a comment
-  # interpolate(~("# abv"),
-  #             mydir = userdir,
-  #             `_env` = environment(),
-  #             file = "code_x3p.R",
-  #             append = TRUE, eval = FALSE)
   
   
   # upload from rds file
@@ -71,7 +59,6 @@ server = function(input, output, session) {
   # - update the referenceSelect and targetSelect selectInputs in the Comparison Parameters tab
   observeEvent(input$x3pdir,
                {
-                 
                  req(shiny.r$data)
                  req(nrow(shiny.r$data) > 0)
                  req(input$x3pdir)
@@ -118,6 +105,9 @@ server = function(input, output, session) {
                                    choices = c("",paste0("x3p",1:nrow(tmp))))
                  
                })
+  
+  
+  ####################################### Code for Manual Deletion tab
   
   # initialize and empty df to store manually annotated points
   plottedPoints_blank <- data.frame(x = numeric(0),
@@ -206,10 +196,10 @@ server = function(input, output, session) {
   # as-needed.
   selectedZoom <- reactiveValues(dat = data.frame(x3p = character(0),
                                                   group = character(0),
-                                            xmin = numeric(0),
-                                            xmax = numeric(0),
-                                            ymin = numeric(0),
-                                            ymax = numeric(0)))
+                                                  xmin = numeric(0),
+                                                  xmax = numeric(0),
+                                                  ymin = numeric(0),
+                                                  ymax = numeric(0)))
   
   # once the user zooms-into the scan, initialize a new region to annotate
   observeEvent(input$manualProcZoom,{
@@ -298,9 +288,9 @@ server = function(input, output, session) {
     })
     
     if(!is.null(input$editPolygonSelect)){
-
+      
       zoom <- isolate(selectedZoom$dat)
-
+      
       # if the user redrew the rectangle without creating a new region, then
       # we'll take the most recent values in input$manualProcZoom
       if(redrawnRectangle){
@@ -327,29 +317,29 @@ server = function(input, output, session) {
           distinct()
         
       }
-
+      
       selectedZoom$dat <<- zoom
-
+      
     }
   })
   
   observeEvent(input$editPolygonSelect,{
-
+    
     req(input$editPolygonSelect)
-
+    
     zoom <- isolate(selectedZoom$dat)
-
-      zoom <- bind_rows(zoom,
-                        data.frame(x3p = input$x3prgl1_select,
-                                   group = input$editPolygonSelect,
-                                   xmin = input$manualProcZoom$xmin,
-                                   xmax = input$manualProcZoom$xmax,
-                                   ymin = input$manualProcZoom$ymin,
-                                   ymax = input$manualProcZoom$ymax)) %>%
-        distinct()
-
-      selectedZoom$dat <<- zoom
-
+    
+    zoom <- bind_rows(zoom,
+                      data.frame(x3p = input$x3prgl1_select,
+                                 group = input$editPolygonSelect,
+                                 xmin = input$manualProcZoom$xmin,
+                                 xmax = input$manualProcZoom$xmax,
+                                 ymin = input$manualProcZoom$ymin,
+                                 ymax = input$manualProcZoom$ymax)) %>%
+      distinct()
+    
+    selectedZoom$dat <<- zoom
+    
   })
   
   output$x3p1_selectedPolygons <-
@@ -595,9 +585,9 @@ server = function(input, output, session) {
     output$deleteAnnotationsMessage <- renderText({
       
       if(!is.null(tmp$x3p_processed)){
-       
+        
         return("Annotations have been deleted. You will need to redo the preprocessing in the next tab to restore the annotated regions.")
-         
+        
       }
       else{
         return("Annotations have been deleted.")
@@ -606,6 +596,9 @@ server = function(input, output, session) {
     })
     
   })
+  
+  
+  #################################### Code for Preprocess tab
   
   # in the Pre-Processing tab, add a dynamic number steps by including a "Add
   # another step" button
@@ -793,6 +786,8 @@ server = function(input, output, session) {
                  addTooltip(session = session,id = "comparisonButton",title = "Execute comparison procedure under selected parameters")
                  
                })
+  
+  ################################################# Code for Comparison Parameters tab
   
   # plot the reference scan broken up into cells
   output$preComparisonReference <- renderPlot({
@@ -1081,12 +1076,25 @@ server = function(input, output, session) {
     shiny.r$comparisonData_refToTarget <<- comparisonData_refToTarget
     
     updateSelectInput(session = session,
+                      inputId = "comparisonSummary_referenceSelect",
+                      choices = c("",input$referenceSelect))
+    
+    updateSelectInput(session = session,
                       inputId = "postComparisonScanSelect",
                       choices = c("",input$referenceSelect))
     
     updateSelectInput(session = session,
                       inputId = "cellTrajectoryScan",
                       choices = c("",input$referenceSelect))
+    
+    updateSelectInput(session = session,
+                      inputId = "customCellSelection",
+                      choices = c("",input$referenceSelect))
+    
+    updateSelectInput(session = session,
+                      inputId = "comparisonSummary_rotations",
+                      choices = thetas,
+                      selected = thetas)
     
     # perform the comparison in both directions if 
     if(input$bothDirectionsCheck){
@@ -1131,10 +1139,13 @@ server = function(input, output, session) {
                         inputId = "customCellSelection",
                         choices = c("",input$referenceSelect,input$targetSelect))
       
+      updateSelectInput(session = session,
+                        inputId = "comparisonSummary_referenceSelect",
+                        choices = c("",input$referenceSelect,input$targetSelect))
+      
       # reset all of the UI in the comparison Results, Custom Cell, and Cell
       # Trajectories if-needed
       output$postComparisonPlot <- NULL
-      input$postComparisonClick <- NULL
       output$targetScanCellPlot <- NULL
       output$cellComparisonPlot <- NULL
       output$customCellFullScanPlot <- NULL
@@ -1142,9 +1153,286 @@ server = function(input, output, session) {
       output$customCellComparisonPlot <- NULL
       output$cellTrajectoryFullScanPlot <- NULL
       output$cellTrajectoryAnimation <- NULL
+      output$comparisonSummary_histograms <- NULL
+      
     }
     
   })
+  
+  ################################### code for Comparison Results - Summary tab
+  
+  observeEvent(input$comparisonSummary_referenceSelect,{
+    
+    output$comparisonSummary_histograms <-
+      renderGirafe({
+        # renderPlot({
+        
+        req(shiny.r$data)
+        req(input$comparisonSummary_referenceSelect)
+        req(shiny.r$comparisonData_refToTarget)
+        
+        tmp <- isolate(shiny.r$data)
+        comparisonData_refToTarget <- isolate(shiny.r$comparisonData_refToTarget)
+        
+        selectedScan <- input$comparisonSummary_referenceSelect
+        # if we're performing a self-comparison...
+        if(length(unique(c(input$referenceSelect,input$targetSelect))) == 1){
+          
+          otherScan <- input$comparisonSummary_referenceSelect
+          
+          compData <- comparisonData_refToTarget
+          
+        }
+        # otherwise there are two disticnt scans selected
+        else{
+          
+          otherScan <- c(input$referenceSelect,input$targetSelect)[which(c(input$referenceSelect,input$targetSelect) != input$comparisonSummary_referenceSelect)]
+          
+          comparisonData_targetToRef <- isolate(shiny.r$comparisonData_targetToRef)
+          
+          compData <- list(comparisonData_refToTarget,comparisonData_targetToRef)[[which(c(input$referenceSelect,input$targetSelect) == input$comparisonSummary_referenceSelect)]]
+          
+        }
+        
+        # choose a sensible number of rows based on the number of rotations to plot
+        numThetas <- length(seq(from = input$thetaRangeMin,
+                                to = input$thetaRangeMax,
+                                by = input$thetaStep))
+        
+        numRows <- 1
+        if(numThetas > 1){
+          
+          possibleNumRows <- map_lgl(2:ceiling(sqrt(numThetas)),
+                                     function(val){
+                                       
+                                       return((numThetas %% val) == 0)
+                                       
+                                     })
+          
+          numRows <- min((2:ceiling(sqrt(numThetas)))[possibleNumRows])
+        }
+        
+        pltScatter <- compData %>%
+          # filter(theta %in% input$comparisonSummary_rotations) %>%
+          mutate(data_id = paste0(cellIndex,", ",theta)) %>%
+          select(cellIndex,data_id,x,y,theta,fft_ccf,pairwiseCompCor) %>%
+          ggplot(aes(x=x,y=y)) +#,alpha=pairwiseCompCor)) +
+          # geom_point() +
+          geom_jitter_interactive(alpha = .5,size = 2,
+                                  width = 0,
+                                  height= 0,
+                                  aes(
+                                    # data_id = data_id
+                                    tooltip = cellIndex,
+                                    data_id = cellIndex
+                                  )) 
+        
+        if(!is.infinite(numRows)){
+          
+          pltScatter <- pltScatter +
+            facet_wrap(~ theta, nrow = numRows) +
+            theme_bw() +
+            coord_fixed()
+          
+        }
+        else{
+          
+          pltScatter <- pltScatter +
+            facet_wrap(~ theta) +
+            theme_bw() +
+            coord_fixed()
+          
+        }
+        
+        dat <- compData %>%
+          group_by(cellIndex) %>%
+          filter(pairwiseCompCor == max(pairwiseCompCor)) %>%
+          ungroup() %>%
+          mutate(data_id = paste0(cellIndex,", ",theta)) %>%
+          select(cellIndex,data_id,x,y,theta,fft_ccf,pairwiseCompCor) %>%
+          pivot_longer(cols = 3:7,names_to = "var",values_to = "value")
+        
+        plt <- dat %>%
+          ggplot(aes(x=value)) +
+          geom_dotplot_interactive(aes(tooltip = cellIndex,
+                                       data_id = cellIndex
+                                       # data_id = data_id
+          ),
+          stackgroups = TRUE,
+          binpositions = "all",
+          stackratio = 1.1) +
+          facet_wrap(~var,scales = "free_x") +
+          theme_bw()
+        
+        reference <- tmp %>%
+          mutate(x3pName  = paste0("x3p",1:nrow(.))) %>%
+          filter(x3pName == selectedScan) %>%
+          pull(x3p_processed) %>%
+          .[[1]]
+        
+        target <- tmp %>%
+          mutate(x3pName  = paste0("x3p",1:nrow(.))) %>%
+          filter(x3pName == otherScan) %>%
+          pull(x3p_processed) %>%
+          .[[1]]
+        
+        cmcPlts <- cmcPlot_interactive(reference = reference,
+                                       target = target,
+                                       cmcClassifs = compData %>%
+                                         group_by(cellIndex) %>%
+                                         filter(pairwiseCompCor == max(pairwiseCompCor)) %>%
+                                         ungroup() %>%
+                                         mutate(originalMethod = "CMC"),
+                                       type = "list")
+        
+        library(patchwork)
+        
+        return(girafe(code = print(
+          wrap_plots((pltScatter + cmcPlts[[1]]),(plt + cmcPlts[[2]]),nrow = 2)
+        ),
+        # ((pltScatter + cmcPlts[[1]]) / (plt + cmcPlts[[2]])) +
+        #                            patchwork::plot_layout(nrow = 2,heights = c(1,1))),
+        width_svg = 24,height_svg = 15,
+        options = list(opts_selection(css = "fill:orange;stroke:orange;color:black;"))))
+        
+      })
+    
+  })
+  
+  observeEvent(input$comparisonSummary_rePlot,{
+    
+    output$comparisonSummary_histograms <-
+      renderGirafe({
+        
+        req(shiny.r$data)
+        req(input$comparisonSummary_referenceSelect)
+        req(shiny.r$comparisonData_refToTarget)
+        
+        tmp <- isolate(shiny.r$data)
+        comparisonData_refToTarget <- isolate(shiny.r$comparisonData_refToTarget)
+        
+        selectedScan <- input$comparisonSummary_referenceSelect
+        # if we're performing a self-comparison...
+        if(length(unique(c(input$referenceSelect,input$targetSelect))) == 1){
+          
+          otherScan <- input$comparisonSummary_referenceSelect
+          
+          compData <- comparisonData_refToTarget
+          
+        }
+        # otherwise there are two disticnt scans selected
+        else{
+          
+          otherScan <- c(input$referenceSelect,input$targetSelect)[which(c(input$referenceSelect,input$targetSelect) != input$comparisonSummary_referenceSelect)]
+          
+          comparisonData_targetToRef <- isolate(shiny.r$comparisonData_targetToRef)
+          
+          compData <- list(comparisonData_refToTarget,comparisonData_targetToRef)[[which(c(input$referenceSelect,input$targetSelect) == input$comparisonSummary_referenceSelect)]]
+          
+        }
+        
+        # choose a sensible number of rows based on the number of rotations to plot
+        numThetas <- length(input$comparisonSummary_rotations)
+        numRows <- 1
+        if(numThetas > 1){
+          
+          possibleNumRows <- map_lgl(2:ceiling(sqrt(numThetas)),
+                                     function(val){
+                                       
+                                       return((numThetas %% val) == 0)
+                                       
+                                     })
+          
+          numRows <- min((2:ceiling(sqrt(numThetas)))[possibleNumRows])
+          
+        }
+        
+        pltScatter <- compData %>%
+          filter(theta %in% input$comparisonSummary_rotations) %>%
+          mutate(data_id = paste0(cellIndex,", ",theta)) %>%
+          select(cellIndex,data_id,x,y,theta,fft_ccf,pairwiseCompCor) %>%
+          ggplot(aes(x=x,y=y)) +
+          geom_jitter_interactive(alpha = .5,size = 2,
+                                  width = input$comparisonSummary_jitterAmount,
+                                  height= input$comparisonSummary_jitterAmount,
+                                  aes(
+                                    tooltip = cellIndex,
+                                    data_id = cellIndex
+                                  ))
+        
+        
+        if(!is.infinite(numRows)){
+          
+          pltScatter <- pltScatter +
+            facet_wrap(~ theta, nrow = numRows) +
+            theme_bw() +
+            coord_fixed()
+          
+        }
+        else{
+          
+          pltScatter <- pltScatter +
+            facet_wrap(~ theta) +
+            theme_bw() +
+            coord_fixed()
+          
+        }
+        
+        dat <- compData %>%
+          group_by(cellIndex) %>%
+          filter(pairwiseCompCor == max(pairwiseCompCor)) %>%
+          ungroup() %>%
+          mutate(data_id = paste0(cellIndex,", ",theta)) %>%
+          select(cellIndex,data_id,x,y,theta,fft_ccf,pairwiseCompCor) %>%
+          pivot_longer(cols = 3:7,names_to = "var",values_to = "value")
+        
+        plt <- dat %>%
+          ggplot(aes(x=value)) +
+          geom_dotplot_interactive(aes(tooltip = cellIndex,
+                                       data_id = cellIndex
+          ),
+          stackgroups = TRUE,
+          binpositions = "all",
+          stackratio = 1.1) +
+          facet_wrap(~var,scales = "free_x") +
+          theme_bw()
+        
+        reference <- tmp %>%
+          mutate(x3pName  = paste0("x3p",1:nrow(.))) %>%
+          filter(x3pName == selectedScan) %>%
+          pull(x3p_processed) %>%
+          .[[1]]
+        
+        target <- tmp %>%
+          mutate(x3pName  = paste0("x3p",1:nrow(.))) %>%
+          filter(x3pName == otherScan) %>%
+          pull(x3p_processed) %>%
+          .[[1]]
+        
+        cmcPlts <- cmcPlot_interactive(reference = reference,
+                                       target = target,
+                                       cmcClassifs = compData %>%
+                                         group_by(cellIndex) %>%
+                                         filter(pairwiseCompCor == max(pairwiseCompCor)) %>%
+                                         ungroup() %>%
+                                         mutate(originalMethod = "CMC"),
+                                       type = "list")
+        
+        library(patchwork)
+        
+        return(girafe(code = print(
+          wrap_plots((pltScatter + cmcPlts[[1]]),(plt + cmcPlts[[2]]),nrow = 2)
+        ),
+        # ((pltScatter + cmcPlts[[1]]) / (plt + cmcPlts[[2]])) +
+        #                            patchwork::plot_layout(nrow = 2,heights = c(1,1))),
+        width_svg = 24,height_svg = 15,
+        options = list(opts_selection(css = "fill:orange;stroke:orange;font-color:black;"))))
+        
+      })
+    
+  })
+  
+  ################################### code for Comparison Results - Individual Cell tab
   
   # on the comparison results tab, the user will select an x3p to explore
   output$postComparisonPlot <- renderPlot({
@@ -1167,11 +1455,9 @@ server = function(input, output, session) {
     # if we're performing a self-comparison...
     if(length(unique(c(input$referenceSelect,input$targetSelect))) == 1){
       
-      otherScan <- input$referenceSelect 
+      otherScan <- input$postComparisonScanSelect
       
-      comparisonData_targetToRef <- isolate(shiny.r$comparisonData_targetToRef)
-      
-      compData <- list(comparisonData_refToTarget,comparisonData_targetToRef)[[which(c(input$referenceSelect,input$targetSelect) == input$postComparisonScanSelect)]]
+      compData <- comparisonData_refToTarget
       
     }
     # otherwise there are two disticnt scans selected
@@ -1179,7 +1465,9 @@ server = function(input, output, session) {
       
       otherScan <- c(input$referenceSelect,input$targetSelect)[which(c(input$referenceSelect,input$targetSelect) != input$postComparisonScanSelect)]
       
-      compData <- comparisonData_refToTarget
+      comparisonData_targetToRef <- isolate(shiny.r$comparisonData_targetToRef)
+      
+      compData <- list(comparisonData_refToTarget,comparisonData_targetToRef)[[which(c(input$referenceSelect,input$targetSelect) == input$postComparisonScanSelect)]]
       
     }
     
@@ -1389,6 +1677,26 @@ server = function(input, output, session) {
     
     req(shiny.r$comparisonData_refToTarget)
     comparisonData_refToTarget <- isolate(shiny.r$comparisonData_refToTarget)
+    
+    selectedScan <- input$cellTrajectoryScan
+    # if we're performing a self-comparison...
+    if(length(unique(c(input$referenceSelect,input$targetSelect))) == 1){
+      
+      otherScan <- input$cellTrajectoryScan
+      
+      compData <- comparisonData_refToTarget
+      
+    }
+    # otherwise there are two disticnt scans selected
+    else{
+      
+      otherScan <- c(input$referenceSelect,input$targetSelect)[which(c(input$referenceSelect,input$targetSelect) != input$cellTrajectoryScan)]
+      
+      comparisonData_targetToRef <- isolate(shiny.r$comparisonData_targetToRef)
+      
+      compData <- list(comparisonData_refToTarget,comparisonData_targetToRef)[[which(c(input$referenceSelect,input$targetSelect) == input$cellTrajectoryScan)]]
+      
+    }
     
     selectedScan <- input$cellTrajectoryScan
     # if we're performing a self-comparison...
@@ -1693,13 +2001,13 @@ server = function(input, output, session) {
     
     
     if(input$customCellType == "Hand-drawn"){
-     
+      
       customCellPlt <<- customCellPlt +
         geom_point(data = plottedPointsCustomCell$dat,
                    aes(x=x,y=y)) +
         geom_polygon(data = plottedPointsCustomCell$dat,
                      aes(x=x,y=y),inherit.aes = FALSE,fill = "black",alpha = .2)
-       
+      
     }
     
     return(customCellPlt)
@@ -1707,15 +2015,15 @@ server = function(input, output, session) {
   })
   
   observeEvent(list(input$customCellType,input$customCellSelection,input$targetSelect_customCell),{
-
+    
     req(shiny.r$data)
     # req(shiny.r$comparisonData_refToTarget)
     req(input$customCellSelection)
     req(input$targetSelect_customCell)
-
+    
     output$targetScanCustomCellPlot <- NULL
     output$customCellComparisonPlot <- NULL
-
+    
   })
   
   observeEvent(input$customHandDrawnCellClick,{
@@ -1860,11 +2168,11 @@ server = function(input, output, session) {
                          function(theta,ind){
                            
                            # if(input$customCellType == "Rectangular"){
-                            
+                           
                            # browser()
                            
-                             dat <- comparison_customCell(refCell,target,theta,maxNonMissingProp = .99)
-                              
+                           dat <- comparison_customCell(refCell,target,theta,maxNonMissingProp = .99)
+                           
                            # }
                            # else{
                            #   
@@ -1898,16 +2206,16 @@ server = function(input, output, session) {
       tidyr::separate(col = cellIndex,into = c("rowIndex","colIndex"),sep = ", ",remove = FALSE) %>%
       filter(pairwiseCompCor == max(pairwiseCompCor))
     
+    
+    # visualize the five plot comparison for the user-selected cell
+    output$customCellComparisonPlot <- renderPlot({
       
-      # visualize the five plot comparison for the user-selected cell
-      output$customCellComparisonPlot <- renderPlot({
-        
-        return(fiveplot(alignedCellData,
-                        reference = input$referenceSelect,
-                        target = input$targetSelect,
-                        cell = unique(alignedCellData$cellIndex)))
-        
-      })
+      return(fiveplot(alignedCellData,
+                      reference = input$referenceSelect,
+                      target = input$targetSelect,
+                      cell = unique(alignedCellData$cellIndex)))
+      
+    })
     
     
     # visualize on the target scan where the aligned target cell is
