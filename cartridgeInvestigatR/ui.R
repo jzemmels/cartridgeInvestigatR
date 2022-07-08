@@ -2,6 +2,7 @@ library(shiny)
 library(shinydashboard)
 library(ggiraph)
 library(shinyBS)
+library(shinyjs)
 
 source("cartridgeInvestigatR_helpers.R")
 
@@ -164,20 +165,57 @@ ui <- dashboardPage(
                                 plotOutput("pltInitX3P")#,
                                 # selectInput("plotUnits",label = "Scan Units",choices = c("Meters","Micrometers","Standard Deviations"))
                        ),
-                       box(
+                       box(width = 12,
                          actionButton(inputId = "skipPreprocessing",
-                                      label = "Skip Preprocessing"),
+                                      label = "Skip Automatic Preprocessing"),
                          bsTooltip("skipPreprocessing",title = "Click if scans are already preprocessed."),
                          conditionalPanel(condition = "input.skipPreprocessing",textOutput(outputId = "skipPreprocessingConfirm")),
                          verbatimTextOutput("infoInitX3P")
                        ),
+                       box(width = 12,
+                           actionButton(inputId = "importTutorialButton",label = "Show Tutorial"),
+                           uiOutput(outputId = "importTutorial"))
+                       
+              ),
+              
+              tabPanel("Automatic Preprocess",
+                       
+                       box(
+                         fluidRow(column(actionButton("insertBtn", "Add another preprocessing step"),width = 4),
+                                  column(actionButton("restartPreprocess","Reset"),width = 4),
+                                  bsTooltip("restartPreprocess",title = "Remove all preprocessing steps")),
+                         h5(""),
+                         div(id = 'placeholder'),
+                         h5(""),
+                         fluidRow(column(width = 3,
+                                         actionButton("preProcessExecute",label = "Perform Automatic Preprocessing"),
+                                         bsTooltip(id = "preProcessExecute",title = "Execute selected preprocessing steps"))),
+                         width = NULL
+                       ),
+                       fluidRow(
+                         box(fluidRow(column(1,
+                                             conditionalPanel(
+                                               condition = "output.hasname_x3p",
+                                               actionButton("preProcessDisplay", "Display x3ps")
+                                             ),
+                         )),
+                         width = 12
+                         )
+                       ),
+                       fluidRow(
+                         plotOutput("preProcessedPlot"),
+                         width = 12
+                       ),
+                       box(width = 12,
+                           actionButton(inputId = "autoPreprocessTutorialButton",label = "Show Tutorial"),
+                           uiOutput(outputId = "autoPreprocessTutorial"))
                        
               ),
               tabPanel("Manual Deletion",
                        
                        fluidRow(column(width = 3,
-                                       selectInput(inputId = "x3prgl1_select",label = "1. Select x3p to Annotate",choices = ""),
-                                       bsTooltip("x3prgl1_select",title = "Select an X3P to manually annotate."),
+                                       selectInput(inputId = "x3prgl1_select",label = "1. Select a processed x3p to annotate",choices = ""),
+                                       bsTooltip("x3prgl1_select",title = 'Click "Skip Preprocessing" or "Perform Preprocessing" on the previous tabs before using this tab.'),
                                        textOutput(outputId = "zoomInMessage")),
                                 column(width = 9,plotOutput("x3p1_ggplot",brush = "manualProcZoom"))),
                        fluidRow(column(width = 3,
@@ -207,40 +245,17 @@ ui <- dashboardPage(
                                        br(),
                                        textOutput(outputId = "deleteAnnotationsMessage")),
                                 column(width = 9,
-                                       rgl::rglwidgetOutput(outputId = "x3p1_rgl",width = "512px",height = "512px"))),
+                                       plotOutput(outputId = "x3p1_rgl",width = "512px",height = "512px")
+                                       # rgl::rglwidgetOutput(outputId = "x3p1_rgl",width = "512px",height = "512px")
+                                       )),
+                       box(width = 12,
+                           actionButton(inputId = "manualDeletionTutorialButton",label = "Show Tutorial"),
+                           uiOutput(outputId = "manualDeletionTutorial")),
                        h4("Open FiX3P: ",a("https://talenfisher.github.io/fix3p/",href = "https://talenfisher.github.io/fix3p/"))
-              ),
-              
-              tabPanel("Preprocess",
-                       
-                       box(
-                         fluidRow(column(actionButton("insertBtn", "Add another preprocessing step"),width = 4),
-                                  column(actionButton("restartPreprocess","Reset"),width = 4),
-                                  bsTooltip("restartPreprocess",title = "Remove all preprocessing steps")),
-                         h5(""),
-                         div(id = 'placeholder'),
-                         h5(""),
-                         fluidRow(column(width = 3,
-                                         actionButton("preProcessExecute",label = "Perform Preprocessing"),
-                                         bsTooltip(id = "preProcessExecute",title = "Execute selected preprocessing steps"))),
-                         width = NULL
-                       ),
-                       fluidRow(
-                         box(fluidRow(column(1,
-                                             conditionalPanel(
-                                               condition = "output.hasname_x3p",
-                                               actionButton("preProcessDisplay", "Display x3ps")
-                                             ),
-                         )),
-                         width = 12
-                         )
-                       ),
-                       fluidRow(
-                         plotOutput("preProcessedPlot"),
-                         width = 12
-                       )
-                       
               )
+              #,
+              # tabPanel("Preprocessing Tutorials",
+              #          includeHTML("demo/ioRadDemonstrations/tutorialOne_importTab.html"))
               
               
             ),

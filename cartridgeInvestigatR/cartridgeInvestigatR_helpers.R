@@ -197,19 +197,19 @@ preProcess_partial <- function(preProcStep,paramValues){
   
   if(preProcStep == "Downsample"){
     
-    return(purrr::partial(x3ptools::x3p_sample,m = paramValues[[1]]))
+    return(purrr::partial(x3ptools::x3p_sample,m = !!paramValues[[1]]))
     
   }
   if(preProcStep == "Crop"){
     
-    return(purrr::partial(cmcR::preProcess_crop,region = tolower(paramValues[[1]]),offset = paramValues[[2]]))
+    return(purrr::partial(cmcR::preProcess_crop,region = tolower(!!paramValues[[1]]),offset = !!paramValues[[2]]))
     
   }
   if(preProcStep == "Level"){
     
     if(paramValues[[1]] == "Mean"){
      
-      return(purrr::partial(cmcR::preProcess_removeTrend,statistic = tolower(paramValues[[1]])))
+      return(purrr::partial(cmcR::preProcess_removeTrend,statistic = tolower(!!paramValues[[1]])))
        
     }
     else{
@@ -218,21 +218,23 @@ preProcess_partial <- function(preProcStep,paramValues){
   }
   if(preProcStep == "Erode"){
     
-    return(purrr::partial(cmcR::preProcess_erode,region = tolower(paramValues[[1]]),morphRadius = paramValues[[2]]))
+    return(purrr::partial(cmcR::preProcess_erode,region = tolower(!!paramValues[[1]]),morphRadius = !!paramValues[[2]]))
     
   }
   if(preProcStep == "Filter"){
     
-    filtParams <- paramValues[[2]] %>%
+    # sometimes(?) the filter type comes after the wavelength cutoffs, so we'll
+    # look for the element starting with "params2"
+    filtParams <- paramValues[[which(str_detect(string = names(paramValues),pattern = "params2"))]] %>%
       stringr::str_split(",") %>%
       .[[1]] %>%
       purrr::map_dbl(as.numeric)
     
     if(paramValues[[1]] == "Lowpass"){
-      return(purrr::partial(cmcR::preProcess_gaussFilter,wavelength = filtParams,filtertype = "lp"))
+      return(purrr::partial(cmcR::preProcess_gaussFilter,wavelength = !!filtParams,filtertype = "lp"))
     }
     else{
-      return(purrr::partial(cmcR::preProcess_gaussFilter,wavelength = filtParams,filtertype = "bp"))
+      return(purrr::partial(cmcR::preProcess_gaussFilter,wavelength = !!filtParams,filtertype = "bp"))
     }
     
     

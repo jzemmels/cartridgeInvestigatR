@@ -64,6 +64,11 @@ server = function(input, output, session) {
                  req(input$x3pdir)
                  tmp <- isolate(shiny.r$data)
                  
+                 tmp <- tmp %>%
+                   mutate(x3pName = paste0("x3p",1:nrow(.)))
+                 
+                 shiny.r$data <<- tmp
+                 
                  output$infoInitX3P <- renderText({
                    
                    purrr::map2_chr(tmp$x3p,1:length(tmp$x3p),
@@ -128,9 +133,9 @@ server = function(input, output, session) {
     # pts <- isolate(plottedPoints$dat)
     
     x3pManualPlt <<- x3pListPlot(list(tmp %>%
-                                        mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
+                                        # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
                                         filter(x3pName == input$x3prgl1_select) %>%
-                                        pull(x3p) %>%
+                                        pull(x3p_processed) %>%
                                         .[[1]]) %>%
                                    set_names(input$x3prgl1_select)) +
       geom_point(data = plottedPoints$dat %>%
@@ -459,16 +464,18 @@ server = function(input, output, session) {
   #points in an rgl window
   observeEvent(input$x3prgl_execute,{
     
-    output$x3p1_rgl <- rgl::renderRglwidget({
+    output$x3p1_rgl <-
+      renderPlot({
+      # rgl::renderRglwidget({
       
       req(shiny.r$data)
       req(nrow(shiny.r$data) > 0)
       tmp <- isolate(shiny.r$data)
       
       x3p <- tmp %>%
-        mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
+        # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
         filter(x3pName == input$x3prgl1_select) %>%
-        pull(x3p) %>%
+        pull(x3p_processed) %>%
         .[[1]]
       
       library(rgl)
@@ -512,33 +519,51 @@ server = function(input, output, session) {
       # with the actual surface matrix
       x3pMasked$mask <- t(colorSurface)
       
+      # delete the masked values from the surface matrix
+      x3pMasked <- x3pDeleteMask(x3pMasked)
+      x3pMasked$mask <- NULL
+      
       tmp <- tmp %>%
-        mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
-        mutate(x3p = ifelse(x3pName == input$x3prgl1_select,
+        # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
+        mutate(x3p_processed = ifelse(x3pName == input$x3prgl1_select,
                             list(x3pMasked),
-                            x3p))
+                            x3p_processed))
       
       shiny.r$data <<- tmp
       
-      # now visualize the mask using an rgl device
-      z <- 10 * surface
-      yidx <- ncol(z):1
-      y <- x3p$header.info$incrementY * yidx
-      x <- x3p$header.info$incrementX * (1:nrow(z))
-      params <- rgl::r3dDefaults
-      params$windowRect <- c(40, 125, 40 + c(750,250)[1], 125 + c(750,250)[2])
-      params$userMatrix <- diag(c(1, 1, 1, 1))
-      params$zoom <- .7
-      xyz <- matrix(c(min(y) - diff(range(y)), mean(y), max(z, 
-                                                            na.rm = TRUE)), ncol = 3)
+      # remove the currently-selected scan from the list of possible scans 
       
-      open3d(params = params)
-      rgl.pop("lights")
-      light3d(x = xyz, diffuse = "gray40", specular = "gray40", 
-              ambient = "grey10", viewpoint.rel = TRUE)
-      light3d(diffuse = "gray20", specular = "gray20")
-      surface3d(x, y, z, color = c(colorSurface), back = "fill")
-      rgl::rglwidget()
+      # updateSelectInput(session = session,
+      #                   inputId = "x3prgl1_select",
+      #                   choices = c("",
+      #                               tmp %>%
+      #                                 mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
+      #                                 filter(x3pName != input$x3prgl1_select) %>%
+      #                                 pull(x3pName)))
+      
+      # return a ggplot of the mask-deleted x3p file
+      
+      return(x3pListPlot(list(x3pMasked)))
+      
+      # now visualize the mask using an rgl device
+      # z <- 10 * surface
+      # yidx <- ncol(z):1
+      # y <- x3p$header.info$incrementY * yidx
+      # x <- x3p$header.info$incrementX * (1:nrow(z))
+      # params <- rgl::r3dDefaults
+      # params$windowRect <- c(40, 125, 40 + c(750,250)[1], 125 + c(750,250)[2])
+      # params$userMatrix <- diag(c(1, 1, 1, 1))
+      # params$zoom <- .7
+      # xyz <- matrix(c(min(y) - diff(range(y)), mean(y), max(z, 
+      #                                                       na.rm = TRUE)), ncol = 3)
+      # 
+      # open3d(params = params)
+      # rgl.pop("lights")
+      # light3d(x = xyz, diffuse = "gray40", specular = "gray40", 
+      #         ambient = "grey10", viewpoint.rel = TRUE)
+      # light3d(diffuse = "gray20", specular = "gray20")
+      # surface3d(x, y, z, color = c(colorSurface), back = "fill")
+      # rgl::rglwidget()
     })
     
     output$postConfirmationMessage <- renderText({
@@ -557,15 +582,15 @@ server = function(input, output, session) {
     
     # delete the mask added to the x3p
     x3pMask <- tmp %>%
-      mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
+      # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
       filter(x3pName == input$x3prgl1_select) %>%
-      pull(x3p) %>%
+      pull(x3p_processed) %>%
       .[[1]]
     
     x3pMask$mask <- NULL
     
     tmp <- tmp %>%
-      mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
+      # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
       mutate(x3p = ifelse(x3pName == input$x3prgl1_select,
                           list(x3pMask),
                           x3p))
@@ -597,6 +622,45 @@ server = function(input, output, session) {
     
   })
   
+  # code to render Tutorial
+  observeEvent(input$manualDeletionTutorialButton,{
+    
+    output$manualDeletionTutorial <- renderUI({
+      
+      return(HTML(paste0('<div style="max-width: 100%; width: 800px; margin: 0 auto;"> <div style="display: none;"> <p style="display: none; text-align: center; margin-top: 10px;"> <i style="font-style: italic; font-weight: bold; color: #CCCCCC; font-size: 18px;">12 STEPS</i> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 1. Whether you perform preprocessing in the Automatic Preprocessing tab or upload scans that are preprocessed, you may wish to manually remove certain regions of a scan. In the example shown, we wish to remove the highlighted dark purple region. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=1&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 1 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 2. Click on the <b style",
+                         '="font-weight:normal;color:#FF00D6">Manual Deletion</b> tab. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=2&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 2 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 3. Select a scan from the dropdown. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=3&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 3 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 4. In this case, we are interested in removing a region from x3p3. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=4&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 4 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 5. A plot will appear of the selected scan. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=5&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 5 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 6. With your mouse, click and drag to highlight a region of interest. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=6&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 6 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 6b. Drop </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=6b&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 6b image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 7. A zoomed-in visualization of the region will appear below. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=7&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 7 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 8. Click on the visual to place a point. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=8&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 8 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 9. Place three or more points to start a polygon. This polygon will be removed from the scan. Continue placing points until the region of interest is highlighted. In the example show, we will highlight the dark purple region. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=9&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 9 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 10. Once the region of interest is fully highlighted, click <b style",
+                         '="font-weight:normal;color:#FF00D6">Confirm Annotations.</b> </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=10&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 10 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 11. Inspect plot that appears to determine whether additional deletion is needed. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=11&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 11 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 12. Once you're happy with the manual deletions, you may continue on to the <b style",
+                         '="font-weight:normal;color:#FF00D6">Comparing</b> stage. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984835&step_number=12&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 12 image" /> </p> </div> </div> <h3 style="display: none; font-size: 18px; margin-top: 89px; margin-bottom: 15px;">',
+                         "Here's an interactive tutorial </h3> <i style",
+                         '="display: none; font-size: 15px; margin-top: 0; margin-bottom: 43px;">** Best experienced in Full Screen (click the icon in the top right corner before you begin) **</i> <p style="display: none;"> <a href="https://www.iorad.com/player/1984835/cartridgeInvestigatR-Tutorial-3--Manual-Deletion-tab">https://www.iorad.com/player/1984835/cartridgeInvestigatR-Tutorial-3--Manual-Deletion-tab</a> </p> <p style="border: 0; min-width: 100%; margin-bottom: 0; height: 801px;"> <iframe src="https://www.iorad.com/player/1984835/cartridgeInvestigatR-Tutorial-3--Manual-Deletion-tab?src=iframe&oembed=1" width="100%" height="500px" style="width: 100%; height: 800px; " referrerpolicy="strict-origin-when-cross-origin" frameborder="0" webkitallowfullscreen="webkitallowfullscreen" mozallowfullscreen="mozallowfullscreen" allowfullscreen="allowfullscreen" allow="camera; microphone"></iframe> </p>'
+      )))
+      
+    })
+    
+  })
   
   #################################### Code for Preprocess tab
   
@@ -692,8 +756,6 @@ server = function(input, output, session) {
   # perform the preprocessing procedures
   observeEvent(input$preProcessExecute,{
     
-    # 
-    
     # # shinybusy::show_modal_spinner(spin = "fingerprint", text = "Preprocessing scans")
     
     # the input object is updated as the user adds more preprocessing steps
@@ -770,6 +832,30 @@ server = function(input, output, session) {
     
   })
   
+  # code to render Tutorial
+  observeEvent(input$importTutorialButton,{
+    
+    output$importTutorial <- renderUI({
+      
+      return(HTML(paste0('<div style="max-width: 100%; width: 800px; margin: 0 auto;"> <div style="display: none;"> <p style="display: none; text-align: center; margin-top: 10px;"> <i style="font-style: italic; font-weight: bold; color: #CCCCCC; font-size: 18px;">5 STEPS</i> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 1. Click <b style",
+                         '="font-weight:normal;color:#FF00D6">Select a folder containing x3p files</b> </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984732&step_number=1&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 1 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 2. Select a folder containing x3p files to upload </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984732&step_number=2&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 2 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 3. After selecting a folder, click <b style",
+                         '="font-weight:normal;color:#FF00D6">Select</b> to upload the scans </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984732&step_number=3&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 3 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 4. If the uploaded scans are already preprocessed (they are not in the example shown), then click <b style",
+                         '="font-weight:normal;color:#FF00D6">Skip Automatic Preprocessing.</b> </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984732&step_number=4&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 4 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 5. Otherwise, if the scans require automatic preprocessing, proceed to the <b style",
+                         '="font-weight:normal;color:#FF00D6">Automatic Preprocess </b>tab. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984732&step_number=5&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 5 image" /> </p> </div> </div> <h3 style="display: none; font-size: 18px; margin-top: 89px; margin-bottom: 15px;">',
+                         "Here's an interactive tutorial </h3> <i style",
+                         '="display: none; font-size: 15px; margin-top: 0; margin-bottom: 43px;">** Best experienced in Full Screen (click the icon in the top right corner before you begin) **</i> <p style="display: none;"> <a href="https://www.iorad.com/player/1984732/cartridgeInvestigatR-Tutorial-1--Import-tab">https://www.iorad.com/player/1984732/cartridgeInvestigatR-Tutorial-1--Import-tab</a> </p> <p style="border: 0; min-width: 100%; margin-bottom: 0; height: 801px;"> <iframe src="https://www.iorad.com/player/1984732/cartridgeInvestigatR-Tutorial-1--Import-tab?src=iframe&oembed=1" width="100%" height="500px" style="width: 100%; height: 800px; " referrerpolicy="strict-origin-when-cross-origin" frameborder="0" webkitallowfullscreen="webkitallowfullscreen" mozallowfullscreen="mozallowfullscreen" allowfullscreen="allowfullscreen" allow="camera; microphone"></iframe> </p>'
+             )))
+      
+    })
+    
+  })
+  
   # add the "Perform Comparison" button to the Comparison tab only if the
   # preProcessExecute or skipPreprocessing buttons have been clicked
   observeEvent({list(input$preProcessExecute,input$skipPreprocessing)},
@@ -786,6 +872,64 @@ server = function(input, output, session) {
                  addTooltip(session = session,id = "comparisonButton",title = "Execute comparison procedure under selected parameters")
                  
                })
+  
+  # code to render Tutorial
+  observeEvent(input$autoPreprocessTutorialButton,{
+    
+    output$autoPreprocessTutorial <- renderUI({
+      
+      return(HTML(paste0('<div style="max-width: 100%; width: 800px; margin: 0 auto;"> <div style="display: none;"> <p style="display: none; text-align: center; margin-top: 10px;"> <i style="font-style: italic; font-weight: bold; color: #CCCCCC; font-size: 18px;">22 STEPS</i> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 1. After uploading x3p scans that require preprocessing, click on the <b style",
+                         '="font-weight:normal;color:#FF00D6">Automatic Preprocess </b>tab. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=1&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 1 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 2. Add sequential preprocessing steps by clicking <b style",
+                         '="font-weight:normal;color:#FF00D6">Add another preprocessing step </b>an arbitrary number of times. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=2&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 2 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 3. Select a preprocessing step from the drop-down menu. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=3&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 3 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 4. If you select <b style",
+                         '="font-weight:normal;color:#FF00D6">Crop, </b>then choose which <b style="font-weight:normal;color:#FF00D6">Region</b> of the scan you wish to crop and an <b style="font-weight:normal;color:#FF00D6">Offset</b> value to change the amount of cropping. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=4&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 4 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 5. Select a <b style",
+                         '="font-weight:normal;color:#FF00D6">Region</b> from the dropdown. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=5&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 5 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 6. Selecting <b style",
+                         '="font-weight:normal;color:#FF00D6">Exterior</b> will crop the outside of the cartridge case primer. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=6&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 6 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 7. Enter a number into the <b style",
+                         '="font-weight:normal;color:#FF00D6">Offset </b>field to change the amount of cropping (a negative value will remove more of the primer observations from the scan when<b style="font-weight:normal;color:#FF00D6"> Region </b>is set to "Exterior"). </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=7&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 7 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 8. Continue adding preprocessing steps by selecting <b style",
+                         '="font-weight:normal;color:#FF00D6">Add another preprocessing step</b> </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=8&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 8 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 9. Selecting <b style",
+                         '="font-weight:normal;color:#FF00D6">Interior</b> for a <b style="font-weight:normal;color:#FF00D6">Crop</b> preprocessing step will remove observations in the firing pin impression region. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=9&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 9 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 10. A positive value will remove more of the primer observations from the scan when<b style",
+                         '="font-weight:normal;color:#FF00D6"> Region </b>is set to "Interior". </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=10&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 10 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 11. The <b style",
+                         '="font-weight:normal;color:#FF00D6">Level </b>preprocessing step removes the global trend from a scan by subtracting an estimated conditional statistic (Median or Mean). </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=11&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 11 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 12. Select a conditional <b style",
+                         '="font-weight:normal;color:#FF00D6">Statistic</b> to estimate and remove in the scan. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=12&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 12 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 13. A <b style",
+                         '="font-weight:normal;color:#FF00D6">Filter</b> preprocessing step applied a Gaussian filter </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=13&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 13 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 14. Select a type of Gaussian filter (a bandpass or lowpass). </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=14&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 14 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 15. Enter number(s) into the <b style",
+                         '="font-weight:normal;color:#FF00D6">Wavelengths</b> field. Use one value for a lowpass filter and two comma-separated values for a bandpass filter. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=15&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 15 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 16. A <b style",
+                         '="font-weight:normal;color:#FF00D6">Downsample </b>preprocess step reduces the dimension of the scan. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=16&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 16 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 17. Enter a whole number into the <b style",
+                         '="font-weight:normal;color:#FF00D6">Stride</b> field. Larger values reduce the size of scan more. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=17&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 17 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 18. Once you're happy with the preprocessing steps, click <b style",
+                         '="font-weight:normal;color:#FF00D6">Perform Automatic Preprocessing</b>. Preprocessing may take a few minutes to complete. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=18&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 18 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 19. A visualization of the preprocessed scans will appear at the bottom of the page. Inspect this plot to determine whether alternative or further processing is required. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=19&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 19 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 20. If you're happy with the preprocessing performed, you may continue onto the <b style",
+                         '="font-weight:normal;color:#FF00D6">Comparing</b> stage. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=20&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 20 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 21. If would like to change the automatic preprocessing steps, click the Reset button to start over. </p> <p style",
+                         '="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=21&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 21 image" /> </p> <p style',
+                         "='font-size: 15px; line-height: 136%; margin-top: 59px; margin-bottom: 51px;'> 22. Continue to the <b style",
+                         '="font-weight:normal;color:#FF00D6">Manual Deletion</b> tab if you wish to manually remove regions of the scan. </p> <p style="text-align: center;"> <img src="https://www.iorad.com/api/tutorial/stepScreenshot?tutorial_id=1984814&step_number=22&width=800&height=600&mobile_width=450&mobile_height=400&apply_resize=true&min_zoom=0.5" style="max-width: 100%;max-height: 100%;border: none;" alt="Step 22 image" /> </p> </div> </div> <h3 style="display: none; font-size: 18px; margin-top: 89px; margin-bottom: 15px;">',
+                         "Here's an interactive tutorial </h3> <i style",
+                         '="display: none; font-size: 15px; margin-top: 0; margin-bottom: 43px;">** Best experienced in Full Screen (click the icon in the top right corner before you begin) **</i> <p style="display: none;"> <a href="https://www.iorad.com/player/1984814/cartridgeInvestigatR-Tutorial-2--Automatic-Preprocess-tab">https://www.iorad.com/player/1984814/cartridgeInvestigatR-Tutorial-2--Automatic-Preprocess-tab</a> </p> <p style="border: 0; min-width: 100%; margin-bottom: 0; height: 801px;"> <iframe src="https://www.iorad.com/player/1984814/cartridgeInvestigatR-Tutorial-2--Automatic-Preprocess-tab?src=iframe&oembed=1" width="100%" height="500px" style="width: 100%; height: 800px; " referrerpolicy="strict-origin-when-cross-origin" frameborder="0" webkitallowfullscreen="webkitallowfullscreen" mozallowfullscreen="mozallowfullscreen" allowfullscreen="allowfullscreen" allow="camera; microphone"></iframe> </p>'
+      )))
+      
+    })
+    
+  })
   
   ################################################# Code for Comparison Parameters tab
   
