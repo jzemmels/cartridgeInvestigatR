@@ -1,3 +1,13 @@
+library(shiny)
+library(shinydashboard)
+library(ggiraph)
+library(shinyBS)
+library(shinyjs)
+
+source("cartridgeInvestigatR_helpers.R")
+
+knitr::plot_crop("images/workflowDiagram.png")
+
 ui <- dashboardPage(
   dashboardHeader(title = "cartridgeInvestigatR",
                   titleWidth = 300),
@@ -8,396 +18,575 @@ ui <- dashboardPage(
         "<br>",
         "<a href='https://forensicstats.org/'><img style = 'display: block; margin-left: auto; margin-right: auto;' src='csafe-logo-90.png' width = '186'></a>",
         "<br>",
-        "<a href='https://github.com/CSAFE-ISU/cmcR'><p style='text-align:center'>cmcR</p></a>"
+        "<a href='https://github.com/jzemmels/cartridgeInvestigatR'><p style='text-align:center'>cartridgeInvestigatR</p></a>"
       )),
       menuItem("0. Introduction", tabName = "info", icon = icon("info")),
-      menuItem("1. Preprocessing", icon = icon("table"), tabName = "data_related"),
+      menuItem("1. Preprocessing", icon = icon("scissors"), tabName = "data_related"),
       # menuItem("Analysis", icon = icon("pencil-ruler"), startExpanded = TRUE,
       #          menuSubItem("Comparison", tabName = "comparison"),
-      #          menuSubItem("Decision Rules", tabName = "decisionRule")),
-      menuItem("2. Comparison", tabName = "comparison",icon = icon("pencil-ruler")),
-      menuItem("3. Decision Rules", tabName = "decisionRule",icon = icon("filter"))
+      #          menuSubItem("Scoring", tabName = "decisionRule")),
+      menuItem("2. Comparing", tabName = "comparison",icon = icon("pencil-ruler")),
+      menuItem("3. Scoring", tabName = "decisionRule",icon = icon("stats",lib = "glyphicon"))
       
     )
   ),
-  dashboardBody(
-    tabItems(
-      
-      tabItem(tabName = "info",
-              h2("Welcome to cartridgeInvestigatR!"),
-              h4("cmcR in an interactive way to process and compare cartridge cases."),
-              br(),
-              h4("Steps for comparing preprocessed scans:"),
-              h4("1. Click on Select a folder containing x3p files and select a directory of already preprocessed scans."),
-              h4("2. Click the Skip Preprocessing button at the bottom of the Import tab."),
-              h4("3. Click to the Comparison tab on the left. Plots will be created showing the selected Reference and Target scans, although this may take some time to load."),
-              h4("4. Select desired comparison parameters and click the Perform Comparison button. This may take some time to run depending on selected parameters."),
-              h4("5. Under the Comparison Results tab you can click on a particular cell to see some summary information of that cell's most similar regions in the paired scan (measured by the pairwise-complete correlation)."),
-              h4("6. Click to the Decision Rules tab to see a visualziation of the CMCs identified under the Original Method and High CMC method."),
-              br(),
-              h4("Following is a description of each tab:"),
-              h3(strong("1. Preprocessing")),
-              tags$pre(h4(" Import: import a directory of scans."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- Click the Skip Preprocessing button to skip the preprocessing step."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4(" Initial X3P: visualize the imported X3Ps."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- The Focus on a Single X3P button allows you to manually specify the cartridge case center (single-click) the firing pin center (double-click) or remove parts of the scan (drag)."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4(" Preprocess: perform preprocessing procedures (note: this will be changed in the future to allow for custom preprocessing)"),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              br(),
-              h3(strong("2. Comparison")),
-              tags$pre(h4(" Comparison Parameters: set parameters used in the cell-based comparison procedure."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- Start the comparison procedure by clicking the Perform Comparison button at the bottom of the Comparison Parameters tab."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- Cells containing too many missing values (defined by Max. Proportion of NAs per Cell) will be grayed-out."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- By clicking Manually Enter Rotations, only those rotations entered in the Comma-Separated Rotation Values box will be considered."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4(" Comparison Results: visualize the cell/region comparisons."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- Click on a cell to visualize the 3 most similar regions (as measured by the Pairwise-Complete Correlation)."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- A cross-correlation map computed using the Cross-Correlation Theorem is shown below each region. These indicate how the translation values are estimated."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              br(),
-              h3(strong("3. Decision Rules")),
-              tags$pre(h4(" Original Method of Song (2013): visualize the CMCs identified under the Original Method of Song (2013)."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- The diagnostic plots show the x, y, theta, and CCF values at which each cell/region pair attained its CCF across all rotations considered in the comparison."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4(" High CMC Method: visualize the CMCs identified under the High CMC method."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside")),
-              tags$pre(h4("\t- The diagnostic plot(s) show(s) the CMC-theta distribution used to identify High CMCs."),.noWS = c("before", "after", "outside", "after-begin", "before-end","inside"))
-              
-              
-              
-      ),
-      
-      # Second tab content
-      tabItem(tabName = "data_related",
-              h2("Preprocess X3P Files"),
-              
-              tabsetPanel(
-                tabPanel("Import",
-                         
-                         br(),
-                         br(),
-                         
-                         box(
-                           shinyDirButton("x3pdir", "Select a folder containing x3p files", "Upload"),
-                           # p("some text..."), 
-                           width = NULL, title = "Import x3p", solidHeader = TRUE),
-                         
-                         box(
-                           shinyFilesButton("file1", "Select a rds file (your bullet object)", 
-                                            "Please select a rds file (your bullet object); column x3p/grooves is expected", 
-                                            multiple = FALSE, viewtype = "detail"),
-                           verbatimTextOutput("file1_prompt"),
-                           width = NULL, title = "Import rds", solidHeader = TRUE),
-                         
-                         box(
-                           p("If your create shiny.tt in your current environment ..."),
-                           width = NULL, title = "From R Session", solidHeader = TRUE),
-                         box(
-                           actionButton(inputId = "skipPreprocessing",
-                                        label = "Skip Preprocessing"),
-                           conditionalPanel(condition = "input$skipPreprocessing",textOutput(outputId = "skipPreprocessingConfirm"))
-                         ),
-                         
-                ),
-                tabPanel("Initial X3P",
-                         
-                         br(),
-                         br(),
-                         
-                         fluidRow(
-                           box(x3pActionButtonUI("x3p_show_xml", "Show x3p dimensions (px)"),
-                               width = 12)
-                         ),
-                         
-                         # fluidRow(
-                         #   box(x3pActionButtonUI("x3p_flip", "Flip y!"),
-                         #       width = 12)
-                         # ),
-                         
-                         fluidRow(
-                           box(fluidRow(column(1,
-                                               conditionalPanel(
-                                                 condition = "output.hasname_x3p",
-                                                 actionButton("displayx3p2", "Display x3ps")
-                                               ),
-                           ),
-                           column(3,
-                                  conditionalPanel(
-                                    condition = "output.hasname_x3p",
-                                    numericInput(inputId = "plotSampling", 
-                                                 label = "Downsample for Plotting",
-                                                 value = 4,
-                                                 min = 1)
-                                  ),
-                           )
-                           ),
-                           width = 12
-                           )
-                         ),
-                         fluidRow(
-                           plotOutput("x3prgl2"),
-                           width = 12
-                         ),
-                         br(),
-                         br(),
-                         br(),
-                         br(),
-                         shinyjs::useShinyjs(),
-                         actionButton("toggleIndividualX3P","Focus on a Single X3P"),
-                         div(id = "individualX3P_panel",
-                             fluidRow(
-                               column(5,
-                                      selectInput(inputId = "individualX3P",
-                                                  label = "X3P",
-                                                  choices = "1",
-                                                  selected = "1"),
-                                      shiny::verbatimTextOutput("userDefinedCartridgeCaseCenter"),
-                                      shiny::verbatimTextOutput("userDefinedFiringPinCenter"),
-                                      actionButton(inputId = "resetProcessing",label = "Reset Changes")),
-                               column(7,plotOutput("x3prgl_individual",
-                                                   click = "clickExterior",
-                                                   dblclick = "dbclickInterior",
-                                                   brush = "removeBrush")),
-                               width = 12
-                             )) %>% shinyjs::hidden(),
-                ),
-                
-                tabPanel("Preprocess",
-                         
-                         box(
-                           # fluidRow(column(3,
-                           #                 actionButton(inputId = "skipPreprocessing",
-                           #                              label = "Skip Preprocessing"),
-                           #                 conditionalPanel(condition = "input$skipPreprocessing",textOutput(outputId = "skipPreprocessingConfirm"))
-                           # ),
-                           # ),
-                           fluidRow(column(3,numericInput(inputId = "initialDownsample",
-                                                          label = "Initial Downsampling",
-                                                          value = 1,
-                                                          min = 1))),
-                           fluidRow(column(3,numericInput(inputId = "exteriorCrop",
-                                                          label = "Exterior Cropping Offset",
-                                                          value = 0,
-                                                          min = 0))),
-                           fluidRow(column(3,numericInput(inputId = "interiorCrop",
-                                                          label = "Interior Cropping Offset",
-                                                          value = 0,
-                                                          min = 0))),
-                           fluidRow(column(3,numericInput(inputId = "gaussFilterLow",
-                                                          label = "Gaussian Filter Lowpass Wavelength",
-                                                          value = 16,
-                                                          min = 0)),
-                                    column(3,numericInput(inputId = "gaussFilterHigh",
-                                                          label = "Gaussian Filter Highpass Wavelength",
-                                                          value = 500,
-                                                          min = 0))),
-                           fluidRow(column(3,numericInput(inputId = "finalDownsample",
-                                                          label = "Final Downsampling",
-                                                          value = 2,
-                                                          min = 1))),
-                           fluidRow(column(3,x3pActionButtonUI("prepare_shinytt", "Perform Preprocessing"),
-                                           p(" (This might take some time...)"))),
-                           width = NULL
-                         ),
-                         fluidRow(
-                           box(fluidRow(column(1,
-                                               conditionalPanel(
-                                                 condition = "output.hasname_x3p",
-                                                 actionButton("displayx3p3", "Display x3ps")
-                                               ),
-                           )),
-                           width = 12
-                           )
-                         ),
-                         fluidRow(
-                           plotOutput("x3prgl3"),
-                           width = 12
-                         )
-                         
+  dashboardBody(shinybusy::add_busy_spinner(spin = "circle",height = "75px",width = "75px",color = "black"),
+                #               tags$script("
+                #   Shiny.addCustomMessageHandler('resetValue', function(variableName) {
+                #     Shiny.onInputChange(variableName, null);
+                #   });
+                # "),
+                tabItems(
+                  
+                  tabItem(tabName = "info",
+                          h1(strong("Welcome to cartridgeInvestigatR!")),
+                          h4("Use this app to compare 3D topographical scans of cartridge cases."),
+                          h4("Click the 'Help' button on each tab to learn about its functionality."),
+                          # h4("Scroll to the bottom of each page to see a Tutorial of how to use the page."),
+                          h4("See below for more information or visit ",HTML('<a href="https://github.com/jzemmels/cartridgeInvestigatR">https://github.com/jzemmels/cartridgeInvestigatR</a>'),"."),
+                          # br(),
+                          h2(strong("Background")),
+                          h4("This application uses computer algorithms to process and compare scans of cartridge cases.",
+                             'A', tags$i("cartridge case"),' is the metal casing that houses the bullet and gunpowder prior to firing.',
+                             'When a gun is fired, as the bullet moves down the barrel, the cartridge case moves backwards and slams against the back wall of the barrel (a.k.a. the ',tags$i("breech face"),') with considerable force.',
+                             'Any markings on the breech face are "stamped" into the surface of the cartridge case.',
+                             'This leaves so-called ',HTML("<i><a href='https://www.firearmsid.com/A_CCIDImpres.htm'>breech face impressions</a></i>"),' that forensic examiners use to identify the gun from which a cartridge case was fired.',
+                             "Think of these impressions as analogous to a gun's",'"fingerprint" left on the cartridge case.',
+                             "The computer algorithms used in this app compare the breech face impressions on two cartridge cases."),
+                          # br(),
+                          h2(strong("About this app")),
+                          h4("This app allows individuals to engage with cartridge case comparison algorithms without needing to program.",
+                             "If you are interested in cartridge case identification, but do not have expertise in the R programming language, then this app is for you.",
+                             "For more information about the computer algorithms used in this application, visit ",HTML("<a href='https://github.com/CSAFE-ISU/cmcR'>https://github.com/CSAFE-ISU/cmcR</a>"),"."),
+                          h4("To use this app, you must have cartridge case scans stored on your computer as ",HTML("<a href='https://tsapps.nist.gov/NRBTD/Home/DataFormat'>.x3p files</a>"),".",
+                             "X3P (XML 3D Surface Profile) is an ISO standard file format for saving cartridge case scans.",
+                             "You can download example cartridge case .x3p files from the ",HTML("<a href='https://tsapps.nist.gov/NRBTD/'>NIST Ballistics Toolmark Research Database</a>.")),
+                          h4("The functionality of this app encompasses three stages of the cartridge case comparison procedure: Preprocessing, Comparing, and Scoring.",
+                             "These stages are separated into the three tabs that you can see on the left sidebar.",
+                             "You must complete one stage before moving onto the next."),
+                          # br(),
+                          h2(strong("Basic workflow")),
+                          HTML("<div class='row' align='center'> <img src='workflowDiagram.png' alt='Workflow Diagram'> </div>"),
+                          # tags$p(tags$img(src = "workflowDiagram.png",width = "30%",class = "text-align:center")),
+                          h4("To start, make sure that you have cartridge case scans stored as x3p files on your computer."),
+                          h4("If you would simply like to explore this app, you can find three example scans in the 'data/DFSC_Baldwin_TopMatch/' folder included with this app."),
+                          # br(),
+                          h3("1. Preprocessing"),
+                          h4("Use the 'Import' tab to upload scans to the app.",
+                             "Click the 'Select a folder containing x3p files' to upload scans.",
+                             'You may need to preprocess scans to highlight the breech face impressions prior to comparison.',
+                             "Note that the three example scans in the data/DFSC_Baldwin_TopMatch folder have already been preprocessed to some extent, but you're welcome to experiment with additional preprocessing steps."),
+                          # br(),
+                          h4(strong("If your scans require preprocessing:")),
+                          h4("The 'Automatic Preprocess' tab allows you to choose string-together algorithms to automatically preprocess your scans.",
+                             "Click the 'Add another preprocess step' to add a preprocessing algorithm to the sequence.",
+                             "You can also select parameters for the selected preprocessing algorithm.",
+                             "Click 'Perform Automatic Preprocessing' once you're happy with the preprocessing sequence or 'Reset' to start over."),
+                          h4("A preprocessing sequence that we have found to work well for many unprocessed scans is as follows:"),
+                          h4(HTML("<ol>"),
+                             HTML("<li>"),"Crop with parameters Region set to 'Interior' and Offset set to a positive value (try about 10% of the dimensions of the scan).",HTML("</li>"),
+                             HTML("<li>"),"Crop with parameters Region set to 'Exterior' and Offset set to a negative value (try about 30% of the dimensions of the scan).",HTML("</li>"),
+                             HTML("<li>"),"Level with parameter Statistic set to 'Median' (the default).",HTML("</li>"),
+                             HTML("<li>"),"Filter with paramaters Filtertype set to 'Bandpass' and Wavelength(s) set to '16, 500' (the defaults).",HTML("</li>"),
+                             HTML("<li>"),"Downsample with parameter Stride set to '2' (the default).",HTML("</li>"),
+                             HTML("</ol>")),
+                          h4("We encourage you to experiment with different preprocessing steps and orders.",
+                             "The Erode step with the Radius parameter set to a positive value will 'shave off' the interior/exterior of scans.",
+                             "The Delete step is useful if your uploaded scans include masks identifying regions that you would like to remove."),
+                          # br(),
+                          h4(strong("After your scans are preprocessed")),
+                          h4("If your scans were already preprocessed prior to uploading, then you must click the 'Skip Automatic Preprocessing' button on the 'Import' tab before moving on.",
+                             "You may identify regions of a cartridge case scan that you wish to remove (e.g., large dents in the surface of the scan).",
+                             "Use the 'Manual Deletion' to remove such regions from a scan.",
+                             "Once you're happy with your preprocessed scans, you will move onto the Comparing stage."),
+                          h3("2. Comparing"),
+                          h4("In the 'Comparison Parameters' tab, select a reference and target scan to compare.",
+                             "If you're simply exploring the app, we have chosen default parameter settings that work well.",
+                             "However, we encourage experimentation if you're interested.",
+                             "Click on the 'Perform Comparison' button at the bottom of the sidebar once you're happy with the parameters.",
+                             "Once the comparison finishes (the loading bar vanishes), you can move onto the 'Comparison Results - Individual Cells' tab or the Scoring stage."),
+                          h4("In the 'Comparison Results - Individual Cells' tab, you can select a scan from the dropdown.",
+                             "Click on a cell in the plot that appears below to visualize its alignment in the compared scan.",
+                             "A comparison plot appears at the bottom of the page that shows similarities and differences between the selected cell and the region to which it aligns in the other scan.",
+                             # "The top- and bottom-left plots show the selected cell and where it aligns in the compared scan, respectively.",
+                             # "The middle shows the similarities: element-wise average between these two regions with regions grayed-out of the element-wise absolute difference exceeds one standard deviation",
+                             # "Finally, the top- and bottom-right plots show the differences: the selected cell and where it aligns in the compared scan, respectively, with values for which the element-wise absolute difference exceeds one standard deviation."
+                             ),
+                          h4("Finally, the 'Custom Cell' tab allows you to draw your own cell (either rectangular or hand-drawn) on a scan and compare this it to another scan.",
+                             "This tab can be used to analyze how a specific region of interest aligns in another scan."),
+                          h3("3. Scoring"),
+                          h4("The 'Congruent Matching Cells' tab (currently under construction) provides a similarity score for the two selected cartridge cases.",
+                             "Specifically, this tab uses the Congruent Matching Cells (CMC) method introduced by Song (2013) to calculate the number of similar cells between two scans.",
+                             "After selecting desired parameters (the defaults tend to work well), click the 'Visualize CMCs' button to see a plot of the CMCs and non-CMCs overlaid on top of the reference and target scans.",
+                             "The total number of CMCs is used as a similarity score - the higher the CMC count, the more similar the cartridge cases."),
+                          h2(strong("References")),
+                          h4("Zheng, X., Soons, J., Thompson, R., Singh, S., & Constantin, C. (2020). NIST Ballistics Toolmark Research Database. In Journal of Research of the National Institute of Standards and Technology (Vol. 125). National Institute of Standards and Technology (NIST). https://doi.org/10.6028/jres.125.004 "),
+                          h4("J. Song. Proposed “NIST Ballistics Identification System (NBIS)” Based on 3D Topography Measurements on Correlation Cells. American Firearm and Tool Mark Examiners Journal, 45(2):11, 2013. URL https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=910868.")
+                          # h2(strong("1. Preprocessing")),
+                          # h4("Breech face impressions are commony found on the annular region surrounding the firing pin impression on cartridge case primer.",
+                          #    "The algorithms will not work properly if regions other than the breech face impression region are left in the scan.",
+                          #    'As such, before comparing two cartridge cases, scans are often "preprocessed" to isolate the breech face impression region.',
+                          #    "The Preprocessing tab provides both manual and automatic tools to preprocess a cartridge case scan to isolate the breech face impressions."),
+                          # 
+                          # h3(strong("Import")),
+                          # h4("Upload x3p files to the application.",
+                          #    'If the uploaded cartridge case scans are already preprocessed to your liking, you may click the "Skip Preprocessing" button and move on to the Comparison stage.',
+                          #    'Otherwise, move on to the ',strong("Manual Deletion")," or ",strong("Preprocess")," tabs to perform preprocessing."),
+                          # 
+                          # h3(strong("Automatic Preprocess")),
+                          # h4("Apply automatic preprocessing algorithms to the uploaded x3p files.",
+                          #    "Add an arbitrary number of preprocessing steps to be performed sequentially.",
+                          #    'Press the "Perform Preprocessing" button once you are happy with the preprocessing procedure or "Reset" to remove all steps.',
+                          #    "The list of possible preprocessing steps is:"),
+                          # h4(HTML("<ul>"),
+                          #    HTML("<li>"),tags$u("Downsample:")," Decrease the dimension of scans by sampling every [Stride] rows/columns (e.g., Stride = 2 means every other row/column is selected).",HTML("</li>"),
+                          #    HTML("<li>"),tags$u("Crop:")," Remove primer roll-of on the exterior or interior of the breech face impression (BFI) region. The function estimates the radius of the selected [Region]. This estimate can be increased or decreased by setting the [Offset] parameter to a positive or negative value, respectively. You will likely need to experiment with different offset values to find one that isolates the region of interest.",HTML("</li>"),
+                          #    HTML("<li>"),tags$u("Level:")," Remove the global trend in a scan by fitting and subtracting a conditional [Statistic] plane to the surface.",HTML("</li>"),
+                          #    HTML("<li>"),tags$u("Erode:")," Supplementary/alternative to cropping the exterior or interior of the BFI region, apply the morphological operation of erosion with a set mask [Radius] value. A larger radius leads to more erosion.",HTML("</li>"),
+                          #    HTML("<li>"),tags$u("Filter:")," Apply a low/high/bandpass Gaussian filter with set [Wavelength] cutoff(s) to the filter surface.",HTML("</li>"),
+                          #    HTML("<li>"),tags$u("Delete:")," Remove the manually-annotated region(s) created in the ",strong("Manual Deletetion")," tab.",HTML("</li>"),
+                          #    HTML("</ul>")),
+                          # 
+                          # h3(strong("Manual Deletion")),
+                          # h4("Manually annotate a region of the scan, such as primer roll-off, to delete it from the scan",
+                          #    "The steps to manually annotate a scan are:"),
+                          # h4(HTML("<ol>"),
+                          #    HTML("<li>"),"Select a scan to annotate from the drop-down. A plot of the selected scan will appear on the right.",HTML("</li>"),
+                          #    HTML("<li>"),"Click and drag your cursor to draw a rectangle on the plot. A zoomed-in visualization of the selected region will appear below.",HTML("</li>"),
+                          #    HTML("<li>"),'Click on the zoomed-in visualization to place a point. When three or more points are placed, they will be connected to form a region. Pressing "Reset Region" will remove the points for the current region. You may start a new region by drawing a new rectangle on the plot at the top of the page.',HTML("</li>"),
+                          #    HTML("<li>"),'Once you are happy with the annotations, press the "Confirm Annotations" button to "lock" them into the scan. A 3D rendering will appear to the right showing the annotated regions in red. Pressing the "Reset Annotations" button will reset all annotations for the selected scan.',HTML("</li>"),
+                          #    HTML("<li>"),"You can select a new scan to annotate from the drop-down or move on to the ",strong("Preprocess"),' tab if you are finished manually annotating. Note that selecting a new scan from the drop-down before pressing "Confirm Annotations" for the currently-selected scan will remove all annotations - remember to click "Confirm Annotations" before moving on.',HTML("</li>"),
+                          #    HTML("</ol>")),
+                          # 
+                          # h3(strong("Note")),
+                          # h4('To complete the Preprocessing stage, you must click either the "Skip Preprocessing" button in the ',strong("Import"),' tab or the "Perform Preprocessing" button in the ',strong("Preprocess")," tab.",
+                          #    "The comparison procedure will not be available if you do not click one of these two buttons."),
+                          # br(),
+                          # 
+                          # h2(strong("2. Comparing")),
+                          # h4("Compare preprocessed scans and extract similarity features.",
+                          #    "Use this tab to automatically compare two cartridge cases and explore the distributions of the similarity features.",
+                          #    "The comparison algorithm used in this tab is based on the ",tags$i("Congruent Matching Cells")," (CMC) method introduced in Song (2013).",
+                          #    'Briefly, this algorithm begins by selecting a "Reference" scan to divide into a grid of cells.',
+                          #    'Each Reference cell is allowed to roam the surface of a second, "Target" scan to identify its matching position.',
+                          #    "The Target scan is rotated by a range of angles where for each angle, each Reference cell determines the translation at which it maximizes the ",tags$i("cross-correlation function")," (CCF) in the Target scan.",
+                          #    "Five similarity features are collected for each Reference cell and rotation: the translation at which the CCF is maximized, the maxmimum CCF value, and the pairwise-complete correlation between the Reference cell and the Target scan.",
+                          #    'Ultimately, we are interested in determining whether multiple cells come to a "consensus" on the translation and rotation at which the correlation is maxmimized.',
+                          #    "A consensus reached amongst multiple cells is evidence to suggest that the cartridge case pair matches."),
+                          # h3(strong("Comparison Parameters")),
+                          # h4("Set parameters for and execute the cell-based comparison procedure described above.",
+                          #    "The steps to excecute the comparison procedure are as:"),
+                          # h4(HTML("<ol>"),
+                          #    HTML("<li>"),"Select Reference and Target scans from the associated drop-down menus. A visualization of the Reference scan divided into a grid of cells and the selected Target scan will appear to the right. Some cells in the Reference scan will be grayed-out. These are cells containing a proportion of missing values that exceed the [Max. Proportion of NAs per Cell] threshold.",HTML("</li>"),
+                          #    HTML("<li>"),'Change the cell grid by entering comma-separeted integers into the "Cell Grid Size" field.',HTML("</li>"),
+                          #    HTML("<li>"),'Enter a value between 0 and 1 into the "Max. Proportion of NAs per Cell" field. Cells that exceed this threshold are excluded from the comparison procedure. Enter a value of 0.999 to include any cells containing non-NA values.',HTML("</li>"),
+                          #    HTML("<li>"),'Change the range of rotations considered for the Target scan by entering a minimum/maximum angle into the appropriate fields. The [Rotation Step Size] field controls the distance between successive angles (e.g., a step size of 3 implies a rotation grid of -30, -27, -24, etc. degrees)',HTML("</li>"),
+                          #    HTML("<li>"),'Click the "Compare in both directions" if, after the selected Reference cells are compared to the selected Target scan, you wish to break the Target scan into a grid of cells and compare those to the Reference scan. This will effectively double the processing time.',HTML("</li>"),
+                          #    HTML("<li>"),'Once you are happy with the comparison parameters, press the "Perform Comparison" button to initiate the comparison procedure. A progress bar will appear until the comparison procedure concludes. After the progress bar disappears, you may move on to the other Comparing tabs or the Scoring stage.',HTML("</li>"),
+                          #    HTML("</ol>")),
+                          # 
+                          # h3(strong("Comparison Results - Summary")),
+                          # h4("Visualize the similarity features from the comparison procedure. (Note: this tab is still under construction)."),
+                          # h3(strong("Comparison Results - Individual Cells")),
+                          # h4("Analyze the alignment of individual cells."),
+                          # # h3(strong("Cell Trajectories")),
+                          # # h4("Select cells to animate their alignment in the target scan across multiple rotations. (Note: this tab is still under construction)"),
+                          # h3(strong("Custom Cell")),
+                          # h4("Draw your own cell to visualize where it aligns in a target scan."),
+                          # br(),
+                          # 
+                          # h2(strong("3. Scoring")),
+                          # h4("The final result of a comparison is a score that measures the similarity between two cartidge cases.",
+                          #    "Use this tab to explore the distribution of similarity scores.",
+                          #    "(Note: this tab is currently under construction).")
+                          # ,
+                          # h4(" Original Method of Song (2013): visualize the CMCs identified under the Original Method of Song (2013)."),
+                          # h4("\t- The diagnostic plots show the x, y, theta, and CCF values at which each cell/region pair attained its CCF across all rotations considered in the comparison."),
+                          # h4(" High CMC Method: visualize the CMCs identified under the High CMC method."),
+                          # h4("\t- The diagnostic plot(s) show(s) the CMC-theta distribution used to identify High CMCs.")
+                          
+                          
+                          
+                  ),
+                  # Second tab content
+                  tabItem(tabName = "data_related",
+                          # h2("Preprocess X3P Files"),
+                          
+                          tabsetPanel(
+                            tabPanel(icon = fontawesome::fa_i("file-import"),
+                                     title = "Import",
+                                     # box(
+                                     actionButton(inputId = "importHelp",
+                                                  label = "Help",
+                                                  icon = fontawesome::fa_i("question-circle")),
+                                     br(),
+                                     br(),
+                                     shinyFiles::shinyDirButton("x3pdir", "Select a folder containing x3p files", "Upload"), 
+                                     # width = NULL, 
+                                     # title = "Import x3p", 
+                                     # solidHeader = TRUE),
+                                     br(),
+                                     fluidRow(width = 12,
+                                              plotOutput("pltInitX3P")#,
+                                              # selectInput("plotUnits",label = "Scan Units",choices = c("Meters","Micrometers","Standard Deviations"))
+                                     ),
+                                     box(width = 12,
+                                         actionButton(inputId = "skipPreprocessing",
+                                                      label = "Skip Automatic Preprocessing"),
+                                         bsTooltip("skipPreprocessing",title = "Click if scans are already preprocessed."),
+                                         conditionalPanel(condition = "input.skipPreprocessing",textOutput(outputId = "skipPreprocessingConfirm")),
+                                         verbatimTextOutput("infoInitX3P")
+                                     ),
+                                     box(width = 12,
+                                         actionButton(inputId = "importTutorialButton",label = "Show Tutorial"),
+                                         uiOutput(outputId = "importTutorial"))
+                                     
+                            ),
+                            
+                            tabPanel("Automatic Preprocess",
+                                     icon = fontawesome::fa_i("edit"),
+                                     # icon = fontawesome::fa_i("eraser"),
+                                     # icon = fontawesome::fa_i("list-ol"),
+                                     # icon = fontawesome::fa_i("code"),
+                                     actionButton(inputId = "automaticPreprocessHelp",
+                                                  label = "Help",
+                                                  icon = fontawesome::fa_i("question-circle")),
+                                     br(),
+                                     br(),
+                                     box(
+                                       fluidRow(column(actionButton("insertBtn", "Add another preprocessing step"),width = 4),
+                                                column(actionButton("restartPreprocess","Reset"),width = 4),
+                                                bsTooltip("restartPreprocess",title = "Remove all preprocessing steps")),
+                                       h5(""),
+                                       div(id = 'placeholder'),
+                                       h5(""),
+                                       fluidRow(column(width = 3,
+                                                       actionButton("preProcessExecute",label = "Perform Automatic Preprocessing"),
+                                                       bsTooltip(id = "preProcessExecute",title = "Execute selected preprocessing steps"))),
+                                       width = NULL
+                                     ),
+                                     fluidRow(
+                                       # box(
+                                       fluidRow(column(1,
+                                                       conditionalPanel(
+                                                         condition = "output.hasname_x3p",
+                                                         actionButton("preProcessDisplay", "Display x3ps")
+                                                       ),
+                                       ),
+                                       width = 12),
+                                       # width = 12
+                                       # )
+                                     ),
+                                     fluidRow(
+                                       plotOutput("preProcessedPlot"),
+                                       width = 12
+                                     ),
+                                     box(width = 12,
+                                         actionButton(inputId = "autoPreprocessTutorialButton",label = "Show Tutorial"),
+                                         uiOutput(outputId = "autoPreprocessTutorial"))
+                                     
+                            ),
+                            tabPanel("Manual Deletion",icon = fontawesome::fa_i("hand-scissors"),
+                                     actionButton(inputId = "manualDeletionHelp",
+                                                  label = "Help",
+                                                  icon = fontawesome::fa_i("question-circle")),
+                                     br(),
+                                     br(),
+                                     fluidRow(column(width = 3,
+                                                     selectInput(inputId = "x3prgl1_select",label = "1. Select a processed x3p to annotate",choices = ""),
+                                                     bsTooltip("x3prgl1_select",title = 'Click "Skip Preprocessing" or "Perform Preprocessing" on the previous tabs before using this tab.'),
+                                                     textOutput(outputId = "zoomInMessage")),
+                                              column(width = 9,plotOutput("x3p1_ggplot",brush = "manualProcZoom"))),
+                                     fluidRow(column(width = 3,
+                                                     textOutput("regionClickMessage"),
+                                                     uiOutput(outputId = "editPolygonSelect_ui"),
+                                                     textOutput("newRegionMessage"),
+                                                     br(),
+                                                     uiOutput(outputId = "regionResetButton_ui")),
+                                              column(width = 5,
+                                                     plotOutput("x3p1_ggplot_zoom",click = "pointPlacement_zoom")),
+                                              column(width = 4,
+                                                     shiny::tableOutput(outputId = "x3p1_selectedPolygons")),
+                                              tags$script("
+                                            Shiny.addCustomMessageHandler('resetValue', function(variableName) {
+                                            Shiny.onInputChange(variableName, null);
+                                            });
+                                            ")),
+                                     fluidRow(column(width = 3,
+                                                     br(),
+                                                     textOutput(outputId = "confirmationMessage"),
+                                                     br(),
+                                                     uiOutput(outputId = "annotationConfirmationButton_ui"),
+                                                     br(),
+                                                     textOutput(outputId = "postConfirmationMessage"),
+                                                     br(),
+                                                     uiOutput(outputId = "deleteAnnotationsButton_ui"),
+                                                     br(),
+                                                     textOutput(outputId = "deleteAnnotationsMessage")),
+                                              column(width = 9,
+                                                     plotOutput(outputId = "x3p1_rgl",width = "512px",height = "512px")
+                                                     # rgl::rglwidgetOutput(outputId = "x3p1_rgl",width = "512px",height = "512px")
+                                              )),
+                                     box(width = 12,
+                                         actionButton(inputId = "manualDeletionTutorialButton",label = "Show Tutorial"),
+                                         uiOutput(outputId = "manualDeletionTutorial"))
+                                     # ,h4("Open FiX3P: ",a("https://talenfisher.github.io/fix3p/",href = "https://talenfisher.github.io/fix3p/"))
+                            )
+                            #,
+                            # tabPanel("Preprocessing Tutorials",
+                            #          includeHTML("demo/ioRadDemonstrations/tutorialOne_importTab.html"))
+                            
+                            
+                          ),
+                          
+                          
+                  ),
+                  
+                  # First tab content
+                  tabItem(tabName = "comparison",
+                          
+                          tabsetPanel(
+                            
+                            tabPanel("Comparison Parameters",
+                                     icon = fontawesome::fa_i("sliders-h"),
+                                     actionButton(inputId = "comparisonParametersHelp",
+                                                  label = "Help",
+                                                  icon = fontawesome::fa_i("question-circle")),
+                                     br(),
+                                     # br(),
+                                     fluidRow(
+                                       column(2,
+                                              br(),
+                                              selectInput(inputId = "referenceSelect",
+                                                          label = "Select Reference Scan",
+                                                          choices = NULL),
+                                              bsTooltip("referenceSelect",title = "Select scan to be divided into a cell grid"),
+                                              selectInput(inputId = "targetSelect",
+                                                          label = "Select Target Scan",
+                                                          choices = NULL),
+                                              bsTooltip("targetSelect",title = "Select scan to which each reference cell is compared"),
+                                              checkboxInput(inputId = "bothDirectionsCheck",
+                                                            label = "Compare in both directions",
+                                                            value = FALSE),
+                                              bsTooltip("bothDirectionsCheck",title = "After reference-to-target comparison, divide target scan into cells and compare to reference"),
+                                              textInput(inputId = "numCells",
+                                                        label = "Cells Grid Size (Use comma-separation)",
+                                                        value = "8,8"),
+                                              bsTooltip("numCells",title = "Enter number of cells in grid"),
+                                              numericInput(inputId = "maxNonMissingProp",
+                                                           label = "Maximum Proportion of NAs per Cell",
+                                                           value = .99,
+                                                           min = 0,
+                                                           max = 1),
+                                              bsTooltip("maxNonMissingProp",title = "Enter maxmimum proportion that can be missing in a cell to be considered in comparison"),
+                                              numericInput(inputId = "thetaRangeMin",
+                                                           label = "Minimum Rotation Value (degrees)",
+                                                           min = -181,
+                                                           max = 181,
+                                                           value = -30),
+                                              bsTooltip("thetaRangeMin",title = "Enter minimum rotation to be considered (between -180 and 180 degrees)"),
+                                              numericInput(inputId = "thetaRangeMax",
+                                                           label = "Maximum Rotation Value (degrees)",
+                                                           min = -181,
+                                                           max = 181,
+                                                           value = 30),
+                                              bsTooltip("thetaRangeMax",title = "Enter maximum rotation to be considered (greater than minimum, less than 180 degrees)"),
+                                              numericInput(inputId = "thetaStep",
+                                                           label = "Rotation Step Size (degrees)",
+                                                           value = 3,
+                                                           min = 1),
+                                              bsTooltip("thetaStep",title = "Enter distance  between consecutive rotations (in degrees)"),
+                                              uiOutput("comparisonButtonMessage")
+                                       ),
+                                       column(10,
+                                              fluidRow(column(5,plotOutput(outputId = "preComparisonReference")),
+                                                       column(5,plotOutput(outputId = "preComparisonWholeScanTarget"))),
+                                              conditionalPanel(condition = "input.bothDirectionsCheck",
+                                                               fluidRow(column(5,plotOutput(outputId = "preComparisonTarget")),
+                                                                        column(5,plotOutput(outputId = "preComparisonWholeScanReference"))
+                                                               )
+                                              )
+                                       )
+                                     ),
+                                     
+                                     
+                                     
+                            ),
+                            # tabPanel(title = "Comparison Results - Summary",
+                            #          icon = fontawesome::fa_i("map-marked"),
+                            #          # icon = fontawesome::fa_i("hard-hat"),
+                            #          # icon = fontawesome::fa_i("search"),
+                            #          actionButton(inputId = "comparisonResultsSummaryHelp",
+                            #                       label = "Help",
+                            #                       icon = fontawesome::fa_i("question-circle")),
+                            #          br(),
+                            #          br(),
+                            #          h4("Note: this tab is currently under construction"),
+                            #          column(width = 2,
+                            #                 selectInput(inputId = "comparisonSummary_referenceSelect",label = "Choose a reference scan",choices = NULL)
+                            #                 # TODO: uncomment this after IAI workshop
+                            #                 # , selectInput(inputId = "comparisonSummary_rotations",label = "Choose rotations to focus on",
+                            #                 #             choices = NULL,multiple = TRUE),
+                            #                 # numericInput(inputId = "comparisonSummary_jitterAmount",label = "Scatterplot Jitter Value",value = 0,min = 0),
+                            #                 # actionButton(inputId = "comparisonSummary_rePlot",label = "Re-Draw Plots")
+                            #                 ),
+                            #          column(width = 10,
+                            #                 girafeOutput(outputId = "comparisonSummary_histograms",width = "1300px",height = "1300px")
+                            #          ),
+                            #          
+                            # ),
+                            tabPanel("Comparison Results - Individual Cells",
+                                     icon = fontawesome::fa_i("search-plus"),
+                                     actionButton(inputId = "comparisonResultsIndividualCellsHelp",
+                                                  label = "Help",
+                                                  icon = fontawesome::fa_i("question-circle")),
+                                     br(),
+                                     br(),
+                                     column(width = 2,fluidRow(selectInput("postComparisonScanSelect","Select a scan to view",NULL),
+                                                               bsTooltip("postComparisonScanSelect",title = "Select a scan that was divided into a grid of cells"),
+                                                               h4("Click on a cell to see where it aligns in the other scan"))),
+                                     column(5,
+                                            plotOutput(outputId = "postComparisonPlot",click = "postComparisonClick")
+                                     ),
+                                     column(5,
+                                            plotOutput(outputId = "targetScanCellPlot")),
+                                     column(width = 2),
+                                     column(10,
+                                            plotOutput(width = "70%",outputId = "cellComparisonPlot"))
+                            ),
+                            # tabPanel("Cell Trajectories",
+                            #          fluidRow(selectInput("cellTrajectoryScan","Select a scan to analyze",NULL),
+                            #                   bsTooltip("cellTrajectoryScan",title = "Select a scan that was divided into a grid of cells"),
+                            #                   selectInput("cellTrajectorySelections",
+                            #                               multiple = TRUE,
+                            #                               choices = " ",
+                            #                               label = "Click on cells below to visualize their trajectory"),
+                            #                   bsTooltip("cellTrajectorySelections",title = "Either click directly on plot below or manually enter cell indices")),
+                            #          column(4,
+                            #                 plotOutput(outputId = "cellTrajectoryFullScanPlot",click =  "cellTrajectoryClick"),
+                            #                 actionButton(inputId = "cellTrajectoryExecute",label = "Visualize Cell Trajectories"),
+                            #                 bsTooltip("cellTrajectoryExecute",title = "Render animation of cells trajectories"),
+                            #                 downloadButton("saveCellTrajectory","Save Animation"),
+                            #                 bsTooltip("saveCellTrajectory",title = "Save cell trajectory animation (requires clicking the Visualize button)")),
+                            #          # column(3,
+                            #          #        plotOutput(outputId = "allCellTrajectoryPlot")),
+                            #          column(5,
+                            #                 imageOutput(outputId = "cellTrajectoryAnimation"))
+                            # ),
+                            tabPanel("Custom Cell",
+                                     icon = fontawesome::fa_i("microscope"),
+                                     actionButton(inputId = "customCellHelp",
+                                                  label = "Help",
+                                                  icon = fontawesome::fa_i("question-circle")),
+                                     br(),
+                                     br(),
+                                     column(2,
+                                            selectInput(inputId = "customCellType",
+                                                        label = "Type of Cell",
+                                                        choices = c("Rectangular","Hand-drawn")),
+                                            selectInput(inputId = "customCellSelection",
+                                                        label = "Select Reference Scan",
+                                                        choices = NULL),
+                                            bsTooltip("customCellSelection",title = "Select scan to draw your own cell"),
+                                            selectInput(inputId = "targetSelect_customCell",
+                                                        label = "Select Target Scan",
+                                                        choices = NULL),
+                                            bsTooltip("targetSelect_customCell",title = "Select scan to which the custom cell is compared"),
+                                            numericInput(inputId = "thetaRangeMin_customCell",
+                                                         label = "Min. Rotation Value (deg)",
+                                                         min = -181,
+                                                         max = 181,
+                                                         value = -30),
+                                            bsTooltip("thetaRangeMin_customCell",title = "Enter minimum rotation to be considered (between -180 and 180 degrees)"),
+                                            numericInput(inputId = "thetaRangeMax_customCell",
+                                                         label = "Max. Rotation Value (deg)",
+                                                         min = -181,
+                                                         max = 181,
+                                                         value = 30),
+                                            bsTooltip("thetaRangeMax_customCell",title = "Enter maximum rotation to be considered (greater than minimum, less than 180 degrees)"),
+                                            numericInput(inputId = "thetaStep_customCell",
+                                                         label = "Rotation Step Size (deg)",
+                                                         value = 3,
+                                                         min = 1),
+                                            bsTooltip("thetaStep_customCell",title = "Enter distance  between consecutive rotations (in degrees)"),
+                                            conditionalPanel(condition = 'input.customCellType == "Hand-drawn"',
+                                                             actionButton(inputId = "resetHandDrawnCustomCell","Reset Hand-drawn Cell")),
+                                            br(),
+                                            actionButton(inputId = "customCellExecute",label = "Compare Custom Cell"),
+                                            bsTooltip("customCellExecute",title = "Compare custom cell to other cartridge case")
+                                     ),
+                                     h4("Draw your own cell on the scan."),
+                                     fluidRow(column(4,
+                                                     plotOutput(outputId = "customCellFullScanPlot",brush = "customCellBrush")),
+                                              column(4,
+                                                     plotOutput(outputId = "customHandDrawnCell",click = "customHandDrawnCellClick"))),
+                                     fluidRow(column(2,hr()),
+                                              column(5,
+                                                     plotOutput(outputId = "targetScanCustomCellPlot")),
+                                              column(5,
+                                                     plotOutput(outputId = "customCellComparisonPlot")))
+                            ),
+                            
+                          )),
+                  
+                  
+                  
+                  tabItem(tabName = "decisionRule",
+                          column(10,
+                                 tabsetPanel(
+                                   tabPanel(title = "Congruent Matching Cells",
+                                            # icon = fontawesome::fa_i("hard-hat"),
+                                            icon = fontawesome::fa_i("fad fa-th"),
+                                            actionButton(inputId = "congruentMatchingCellsHelp",
+                                                         label = "Help",
+                                                         icon = fontawesome::fa_i("question-circle")),
+                                            br(),
+                                            br(),
+                                            h4("Note: this tab is currently under construction"),
+                                            column(width = 4,
+                                                   selectInput(inputId = "cmcMethodReferenceSelect",label = "Select Reference Scan",choices = NULL),
+                                                   # selectInput(inputId = "cmcMethodTargetSelect",label = "Select Target Scan",choices = NULL),
+                                                   # selectInput(inputId = "cmcMethodSelection",
+                                                   #             label = "Select a CMC Methodology",
+                                                   #             choices = c("Original Method","High CMC")),
+                                                   numericInput(inputId = "translationThreshold",
+                                                                label = "Translation Threshold (pixels)",
+                                                                value = 20,
+                                                                min = 0),
+                                                   
+                                                   numericInput(inputId = "rotationThreshold",
+                                                                label = "Rotation Threshold (degrees)",
+                                                                value = 6,
+                                                                min = 0,
+                                                                max = 360),
+                                                   # selectInput(inputId = "corrSelection",
+                                                   #             label = "Correlation Measure",
+                                                   #             choices = c("Pairwise-Complete Correlation","FFT-based CCF")),
+                                                   numericInput(inputId = "corrThreshold",
+                                                                label = "Correlation Threshold",
+                                                                value = .50,
+                                                                min = 0,
+                                                                max = 1,
+                                                                step = .05),
+                                                   # numericInput(inputId = "highCMCThreshold",
+                                                   #              label = "High CMC Threshold (tau)",
+                                                   #              value = 1,
+                                                   #              min = 1),
+                                                   actionButton(inputId = "cmcPlotExecute",label = "Visualize CMCs")),
+                                            column(width = 8,
+                                                   plotOutput(outputId = "cmcMethodPlot"))),
+                                   # tabPanel("Machine Learning Model",
+                                   # icon = fontawesome::fa_i("tree"),
+                                   #          column(width = 2,
+                                   #                 selectInput(inputId = "MLOutputSelection",
+                                   #                             label = "Select a machine learning model",
+                                   #                             choices = c("Decision Tree","Random Forest"))),
+                                   #          column(width = 10,
+                                   #                 h4("This tab summarizes the visual diagnostic, DBSCAN, and registration features")))
+                                 )
+                          )
+                  )
+                  
                 )
-                
-                
-              ),
-              
-              
-      ),
-      
-      # First tab content
-      tabItem(tabName = "comparison",
-              # h3("Select a Bullet Land"),
-              
-              tabsetPanel(
-                
-                tabPanel("Comparison Parameters",
-                         fluidRow(
-                           column(2,
-                                  br(),
-                                  selectInput(inputId = "referenceSelect",
-                                              label = "Select Reference Scan",
-                                              choices = NULL),
-                                  selectInput(inputId = "targetSelect",
-                                              label = "Select Target Scan",
-                                              choices = NULL),
-                                  checkboxInput(inputId = "bothDirectionsCheck",
-                                                label = "Compare in both directions",
-                                                value = FALSE),
-                                  numericInput(inputId = "numCells",
-                                               label = "Number of Cells",
-                                               value = 64,
-                                               min = 1),
-                                  numericInput(inputId = "maxNonMissingProp",
-                                               label = "Max. Proportion of NAs per Cell",
-                                               value = .85,
-                                               min = 0,
-                                               max = 1),
-                                  checkboxInput(inputId = "preRotateScans",label = "Rotate by Estimated Angle First",value = FALSE),
-                                  #Conditional panel doesn't seem to want to work right now...
-                                  # radioButtons(inputId = "rotationselection",
-                                  #              label = "Rotation",
-                                  #              choices = c("by Range",
-                                  #                          "Manual"),
-                                  #              selected = "by Range"),
-                                  # conditionalPanel("input.rotationselection == 'by range'",
-                                  numericInput(inputId = "thetaRangeMin",
-                                               label = "Min. Rotation Value (deg)",
-                                               min = -180,
-                                               max = 180,
-                                               value = -30),
-                                  numericInput(inputId = "thetaRangeMax",
-                                               label = "Max. Rotation Value (deg)",
-                                               min = -180,
-                                               max = 180,
-                                               value = 30),
-                                  numericInput(inputId = "thetaStep",
-                                               label = "Rotation Step Size (deg)",
-                                               value = 3,
-                                               min = 1), #delete comma if conditionalPanel works
-                                  # ),
-                                  checkboxInput(inputId = "rotationSelection",label = "Manually Enter Rotations",value = FALSE),
-                                  # conditionalPanel("input.rotationselection == 'manual'",
-                                  textInput(inputId = "thetaManualInput",
-                                            label = "Comma-Separated Rotation Values (deg)",
-                                            value = NULL), #delete comma if conditionalPanel works
-                                  # ),
-                                  actionButton(inputId = "comparisonButton",
-                                               label = "Perform Comparison")
-                           ),
-                           column(10,
-                                  fluidRow(column(5,plotOutput(outputId = "preComparisonReference")),
-                                           column(5,plotOutput(outputId = "preComparisonWholeScanTarget"))),
-                                  conditionalPanel(condition = "input.bothDirectionsCheck",
-                                                   fluidRow(column(5,plotOutput(outputId = "preComparisonTarget")),
-                                                            column(5,plotOutput(outputId = "preComparisonWholeScanReference"))
-                                                   )
-                                  )
-                           )
-                         ),
-                         
-                         
-                         
-                ),
-                
-                tabPanel("Comparison Results",
-                         
-                         # fluidRow(
-                         column(4,
-                                plotOutput(outputId = "postComparisonReference",click = "reference_click"),
-                                plotOutput(outputId = "postComparisonTarget",click = "target_click")),
-                         column(3,
-                                plotOutput(outputId = "cellPlot")),
-                         column(5,plotOutput(outputId = "regionPlots",click = "region_click",height="800px"))
-                         # ,plotOutput(outputId = "comparisonDiagnosticPlots")
-                         # ),
-                )
-                
-              ),
-              
-      ),
-      
-      
-      
-      tabItem(tabName = "decisionRule",
-              column(2,
-                     br(),
-                     br(),
-                     br(),
-                     numericInput(inputId = "translationThreshold",
-                                  label = "Translation Threshold (px)",
-                                  value = 20,
-                                  min = 0),
-                     
-                     numericInput(inputId = "rotationThreshold",
-                                  label = "Rotation Threshold (deg)",
-                                  value = 6,
-                                  min = 0,
-                                  max = 360),
-                     numericInput(inputId = "corrThreshold",
-                                  label = "Correlation Threshold",
-                                  value = .45,
-                                  min = 0,
-                                  max = 1,
-                                  step = .05),
-                     numericInput(inputId = "highCMCThreshold",
-                                  label = "High CMC Threshold (tau)",
-                                  value = 1,
-                                  min = 1)),
-              column(10,
-                     tabsetPanel(
-                       tabPanel("Original Method of Song (2013)",
-                                fluidRow(
-                                  plotOutput(outputId = "originalMethodCMCPlot"),
-                                  plotOutput(outputId = "originalMethodCMC_refToTarget_diagnosticPlots")
-                                ),
-                                conditionalPanel(condition = "input.bothDirectionsCheck",
-                                                 fluidRow(
-                                                   plotOutput(outputId = "originalMethodCMCPlot_targetToRef"),
-                                                   plotOutput(outputId = "originalMethodCMC_targetToRef_diagnosticPlots")
-                                                 )
-                                )
-                       ),
-                       
-                       tabPanel("High CMC Method",
-                                fluidRow(
-                                  plotOutput(outputId = "highCMCPlot"),
-                                  plotOutput(outputId = "highCMC_refToTarget_diagnosticPlot")
-                                ),
-                                conditionalPanel(condition = "input.bothDirectionsCheck",
-                                                 fluidRow(
-                                                   plotOutput(outputId = "highCMCPlot_targetToRef"),
-                                                   plotOutput(outputId = "highCMC_targetToRef_diagnosticPlot")
-                                                 )
-                                )
-                       )#,
-                       # tabPanel("Convergence Method",
-                       #          fluidRow(
-                       #            
-                       #          ))
-                     )
-              )
-      )
-      
-    )
   )
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

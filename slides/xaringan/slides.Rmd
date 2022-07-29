@@ -1,0 +1,189 @@
+---
+title: "cartridgeInvestigatR"
+subtitle: "An Interactive App for Cartridge Case Identification"
+author: "Joseph Zemmels"
+institute: "From Scans to Scores Workshop, IAI 2022"
+date: "2022-08-02"
+output:
+  xaringan::moon_reader:
+    seal: false
+    mathjax: "https://cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_HTMLorMML"
+    css: ["default", "css/csafe.css", "css/csafe-fonts.css", "css/this-presentation.css"]
+    lib_dir: libs
+    nature:
+      countIncrementalSlides: false
+---
+
+background-image: url("images/title-slide-bkgd.png")
+
+</br>
+
+# `cartridgeInvestigatR`
+
+## An Interactive App for Cartridge Case Identification
+
+### Joseph Zemmels
+
+#### International Association for Identication Conference, 2022
+
+```{r, load_refs, eval=FALSE,include=FALSE, cache=FALSE}
+library(RefManageR)
+# remotes::install_github("ROpenSci/bibtex")
+RefManageR::BibOptions(check.entries = FALSE,
+                       bib.style = "authoryear",
+                       cite.style = "alphabetic",
+                       style = "markdown",
+                       max.names = 1,
+                       no.print.fields = c("urldate","file","issn","url","keywords","language","abstract"),
+                       hyperlink = FALSE,
+                       dashed = FALSE)
+myBib <- RefManageR::ReadBib("ref.bib", check = FALSE)
+```
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(cmcR)
+library(x3ptools)
+library(patchwork)
+
+options(htmltools.dir.version = FALSE)
+
+knitr::opts_chunk$set(echo = FALSE,
+                      fig.align = 'center')
+```
+
+
+---
+
+# Acknowledgements
+
+## Funding statement
+
+This work was partially funded by the Center for Statistics and Applications in Forensic Evidence (CSAFE) through Cooperative Agreement 70NANB20H019 between NIST and Iowa State University, which includes activities carried out at Carnegie Mellon University, Duke University, University of California Irvine, University of Virginia, West Virginia University, University of Pennsylvania, Swarthmore College and University of Nebraska, Lincoln.
+
+---
+
+```{r}
+knitr::include_graphics("images/comparisonPipelineDiagram.png")
+```
+
+
+0) <u>Data Collection</u>: topographically scan fired cartridge cases
+
+--
+
+1) <u>Preprocess</u>: prepare cartridge case scans for comparison
+
+--
+
+2) <u>Compare</u>: compare two scans
+
+--
+
+3) <u>Score</u>: calculate a similarity score based on comparison
+
+--
+
+Lastly, a conclusion is formed based on results of examination (e.g., identification, exclusion, inconclusive).
+
+Our app encompasses the Preprocess, Compare, and Score steps
+
+---
+
+## 0) Data Collection
+
+- Cartridge cases recovered from scene of shooting and from a suspect's firearm
+
+  - Sufficient agreement between class characteristics
+
+- Use 3D topographic scanner to scan cartridge cases
+
+  - Scans are saved as x3p (XML 3D Surface Profile) files
+
+```{r,out.width="60%"}
+knitr::include_graphics("images/dataCollectionExample.png")
+```
+
+
+---
+
+## 1) Preprocess
+
+- <u>Isolate</u>: remove regions of cartridge case scan that do not contain breech face impressions.
+
+- <u>Emphasize</u>: intensify BF impressions compared to other markings
+
+```{r}
+knitr::include_graphics("images/preProcessDiagram.png")
+```
+
+
+---
+
+## 2) Compare
+
+- Compare surfaces of two preprocessed cartridge case scans
+
+--
+
+- We use the cell-based procedure outlined in Song (2013):
+
+```{r,out.width="70%"}
+knitr::include_graphics("images/cmc_illustration.PNG")
+```
+
+1. Divide one scan into a grid of "cells"
+
+--
+
+2. Allow each cell to roam over the surface of the other scan
+
+--
+
+3. Determine where each cell aligns best by maximizing the cross-correlation
+
+
+---
+
+## 3) Score
+
+- Use comparison results to calculate a similarity "score."
+
+--
+
+- For example, Congruent Matching Cells method [Song, 2013]
+
+```{r,out.width="80%"}
+knitr::include_graphics("images/comparisonPlot.png")
+```
+
+
+--
+
+- CMCs "agree" on where they align in the other scan
+
+---
+
+## The `cartridgeInvestigatR` app
+
+- We want non-programmers to engage with these algorithms
+
+- Our app enables experimentation and learning
+
+```{r,out.width="40%"}
+knitr::include_graphics("images/workflowDiagram.png")
+```
+
+
+--
+
+- [csafe.shinyapps.io/cartridgeInvestigatR/](https://csafe.shinyapps.io/cartridgeInvestigatR/)
+
+---
+class: primary-blue
+# References
+
+Zheng, X., Soons, J., Thompson, R., Singh, S., & Constantin, C. (2020). NIST Ballistics Toolmark Research Database. In Journal of Research of the National Institute of Standards and Technology (Vol. 125). National Institute of Standards and Technology (NIST). [https://doi.org/10.6028/jres.125.004](https://doi.org/10.6028/jres.125.004)
+
+J. Song. Proposed “NIST Ballistics Identification System (NBIS)” Based on 3D Topography Measurements on Correlation Cells. American Firearm and Tool Mark Examiners Journal, 45(2):11, 2013. URL [https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=910868](https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=910868).
+

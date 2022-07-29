@@ -1,13 +1,14 @@
-name: cartridgeinvestigatR
-title: cartridgeinvestigatR
+name: cartridgeInvestigatR
+title: cartridgeInvestigatR
 username:
 account: jzemmels
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3745826
-bundleId: 4308124
+bundleId: 6143421
 url: https://jzemmels.shinyapps.io/cartridgeinvestigatR/
-when: 1615014800.94031
+when: 1659041055.97409
+lastSyncTime: 1659041055.97409
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|forppt.R|graphics.pptx|img_20210217_095708062.jpg|fadul/Fadul 1-1.x3p|fadul/Fadul 1-2.x3p|helpfiles/test.md|inst/R/server_main - Copy.R
+ignoredFiles: www/anim.gif

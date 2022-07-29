@@ -1,0 +1,105 @@
+---
+title: "cartridgeInvestigatR"
+subtitle: "An Interactive App to Compare Cartridge Cases"
+author: "Joe Zemmels, Susan VanderPlas, Heike Hofmann"
+format: 
+  revealjs:
+    theme: simple
+editor: visual
+---
+
+## Cartridge Case Comparison Algorithms
+
+[Diagram of four broad steps goes here]
+
+::: {.incremental}
+
+0. <u>Data Collection</u>: topographically scan cartridge cases
+
+1. <u>Preprocess</u>: prepare cartridge case scans for comparison
+
+2. <u>Compare</u>: Compare two scans
+
+3. <u>Score</u>: Calculate a similarity score based on comparison
+
+:::
+
+<!-- . . . -->
+
+<!-- We want non-programmers to interact with and learn about these algorithms. -->
+
+
+
+## Step 0: Data Collection
+
+
+- Cartridge cases recovered from scene of shooting and from a suspect's firearm
+
+  - Sufficient agreement between class characteristics
+
+. . . 
+
+- Use 3D topographic scanner to scan cartridge cases
+
+  - Scans are saved as x3p (XML 3D Surface Profile) files
+
+[Picture of TopMatch scanner with 2 scans here]
+
+
+
+## Step 1: Preprocess
+
+<u>Isolate</u>: remove regions of cartridge case scan that do not contain breech face impressions.
+
+. . .
+
+<u>Emphasize</u>: intensify BF impressions compared to other markings
+
+[Animated picture of cropping, then de-trending, then filtering effect on scan here]
+
+## Step 2: Compare
+
+Compare surfaces of two preprocessed cartridge case scans
+
+. . .
+
+We use the cell-based procedure outlined in Song (2013):
+
+::: {.incremental}
+
+1. Divide one scan into a grid of "cells"
+
+2. Allow each cell to roam over the surface of the other scan
+
+3. Determine where each cell aligns best by maximizing the *cross-correlation*
+
+:::
+
+. . .
+
+[For each bullet above, show reference scan divided into a grid of cells, then diagram of one cell compared to the other scan, and finally the alignments of each cell in the target scan]
+
+## Step 3: Score
+
+Use comparison results to calculate a similarity "score."
+
+. . .
+
+For example, *Congruent Matching Cells* method [Song, 2013]
+
+[CMC results plot here]
+
+CMCs "agree" on where they align in the other scan
+
+
+## The `cartridgeInvestigatR` app
+
+- We want non-programmers to engage with these algorithms
+
+- Our app enables experimentation and learning
+
+[Diagram of workflow]
+
+- [https://csafe.shinyapps.io/cartridgeInvestigatR/]( https://csafe.shinyapps.io/cartridgeInvestigatR/)
+
+## References

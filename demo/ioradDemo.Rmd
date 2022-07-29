@@ -1,0 +1,38 @@
+---
+title: "R Notebook"
+---
+
+```{r}
+library(rvest)
+
+ioRadData <- read_html("ioRadDemonstrations/tutorialOne_importTab.html")
+```
+
+```{r}
+ioRadData %>%
+  html_elements("[src]") %>%
+  html_attr("src") %>%
+  unique() %>%
+  walk(~ {
+    
+    if(str_detect(.,"step_number=")){
+     
+      imName <- str_extract(.,"tutorial_id=[0-9]{1,}\\&step_number=[0-9]{1,}")
+    
+    # browser()
+    
+    im <- magick::image_read(path = .,) %>%
+      magick::image_ggplot()
+      # magick::image_convert(format = "png")
+    
+    ggsave(filename = paste0("ioRadPictures/",imName,".png"),plot = im)
+    
+    # knitr::plot_crop(paste0("ioRadPictures/",imName,".png"))
+    
+    # magick::image_write(image = im,path = paste0("ioRadPictures/",imName,".png"))
+       
+    }
+    
+  })
+```
+

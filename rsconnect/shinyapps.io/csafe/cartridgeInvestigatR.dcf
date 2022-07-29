@@ -1,0 +1,13 @@
+name: cartridgeInvestigatR
+title: cartridgeInvestigatR
+username:
+account: csafe
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6704900
+bundleId: 6140418
+url: https://csafe.shinyapps.io/cartridgeInvestigatR/
+when: 1658972909.76762
+lastSyncTime: 1658972909.76762
+asMultiple: FALSE
+asStatic: FALSE

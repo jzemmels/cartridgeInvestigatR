@@ -1632,8 +1632,6 @@ observeEvent({input$reference_click},
                    stringr::str_extract_all("[0-9]{1,}") %>%
                    unlist()
                  
-                 browser()
-                 
                  regionCenter <- c(mean(c(as.numeric(regionLocations[[3]]),as.numeric(regionLocations[[4]]))),
                                    mean(c(as.numeric(regionLocations[[1]]),as.numeric(regionLocations[[2]]))))
                  
