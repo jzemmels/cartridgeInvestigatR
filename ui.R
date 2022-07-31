@@ -30,7 +30,16 @@ ui <- dashboardPage(
       
     )
   ),
-  dashboardBody(shinybusy::add_busy_spinner(spin = "circle",height = "75px",width = "75px",color = "black"),
+  dashboardBody(
+    # tags$head(
+    # tags$style(
+      # HTML(".shiny-notification {
+      #        position:fixed;
+      #        top: calc(50%);
+      #        left: calc(50%);
+      #        }
+      #        "))),
+    shinybusy::add_busy_spinner(spin = "circle",height = "75px",width = "75px",color = "black"),
                 #               tags$script("
                 #   Shiny.addCustomMessageHandler('resetValue', function(variableName) {
                 #     Shiny.onInputChange(variableName, null);
@@ -78,7 +87,7 @@ ui <- dashboardPage(
                              "Note that the three example scans in the data/DFSC_Baldwin_TopMatch folder have already been preprocessed to some extent, but you're welcome to experiment with additional preprocessing steps."),
                           # br(),
                           h4(strong("If your scans require preprocessing:")),
-                          h4("The 'Automatic Preprocess' tab allows you to choose string-together algorithms to automatically preprocess your scans.",
+                          h4("The 'Automatic Preprocess' tab allows you to string-together algorithms to automatically preprocess your scans.",
                              "Click the 'Add another preprocess step' to add a preprocessing algorithm to the sequence.",
                              "You can also select parameters for the selected preprocessing algorithm.",
                              "Click 'Perform Automatic Preprocessing' once you're happy with the preprocessing sequence or 'Reset' to start over."),
@@ -106,7 +115,7 @@ ui <- dashboardPage(
                              "Click on the 'Perform Comparison' button at the bottom of the sidebar once you're happy with the parameters.",
                              "Once the comparison finishes (the loading bar vanishes), you can move onto the 'Comparison Results - Individual Cells' tab or the Scoring stage."),
                           h4("In the 'Comparison Results - Individual Cells' tab, you can select a scan from the dropdown.",
-                             "Click on a cell in the plot that appears below to visualize its alignment in the compared scan.",
+                             "Click on a cell in the plot that appears to visualize its alignment in the compared scan.",
                              "A comparison plot appears at the bottom of the page that shows similarities and differences between the selected cell and the region to which it aligns in the other scan.",
                              # "The top- and bottom-left plots show the selected cell and where it aligns in the compared scan, respectively.",
                              # "The middle shows the similarities: element-wise average between these two regions with regions grayed-out of the element-wise absolute difference exceeds one standard deviation",
@@ -117,7 +126,7 @@ ui <- dashboardPage(
                           h3("3. Scoring"),
                           h4("The 'Congruent Matching Cells' tab (currently under construction) provides a similarity score for the two selected cartridge cases.",
                              "Specifically, this tab uses the Congruent Matching Cells (CMC) method introduced by Song (2013) to calculate the number of similar cells between two scans.",
-                             "After selecting desired parameters (the defaults tend to work well), click the 'Visualize CMCs' button to see a plot of the CMCs and non-CMCs overlaid on top of the reference and target scans.",
+                             "After selecting desired parameters (the defaults tend to work well), click the 'Visualize CMCs' button to see a plot of the CMCs and non-CMCs overlaid on the reference and target scans.",
                              "The total number of CMCs is used as a similarity score - the higher the CMC count, the more similar the cartridge cases."),
                           h2(strong("References")),
                           h4("Zheng, X., Soons, J., Thompson, R., Singh, S., & Constantin, C. (2020). NIST Ballistics Toolmark Research Database. In Journal of Research of the National Institute of Standards and Technology (Vol. 125). National Institute of Standards and Technology (NIST). https://doi.org/10.6028/jres.125.004 "),
@@ -293,14 +302,16 @@ ui <- dashboardPage(
                                      br(),
                                      br(),
                                      fluidRow(column(width = 3,
+                                                     # uiOutput("x3prgl1_select_ui"),
                                                      selectInput(inputId = "x3prgl1_select",label = "1. Select a processed x3p to annotate",choices = ""),
                                                      bsTooltip("x3prgl1_select",title = 'Click "Skip Preprocessing" or "Perform Preprocessing" on the previous tabs before using this tab.'),
                                                      textOutput(outputId = "zoomInMessage")),
                                               column(width = 9,plotOutput("x3p1_ggplot",brush = "manualProcZoom"))),
                                      fluidRow(column(width = 3,
                                                      textOutput("regionClickMessage"),
-                                                     uiOutput(outputId = "editPolygonSelect_ui"),
-                                                     textOutput("newRegionMessage"),
+                                                     uiOutput("newRegion_ui"),
+                                                     # uiOutput(outputId = "editPolygonSelect_ui"),
+                                                     # textOutput("newRegionMessage"),
                                                      br(),
                                                      uiOutput(outputId = "regionResetButton_ui")),
                                               column(width = 5,
@@ -326,10 +337,10 @@ ui <- dashboardPage(
                                               column(width = 9,
                                                      plotOutput(outputId = "x3p1_rgl",width = "512px",height = "512px")
                                                      # rgl::rglwidgetOutput(outputId = "x3p1_rgl",width = "512px",height = "512px")
-                                              )),
-                                     box(width = 12,
-                                         actionButton(inputId = "manualDeletionTutorialButton",label = "Show Tutorial"),
-                                         uiOutput(outputId = "manualDeletionTutorial"))
+                                              ))#,
+                                     # box(width = 12,
+                                     #     actionButton(inputId = "manualDeletionTutorialButton",label = "Show Tutorial"),
+                                     #     uiOutput(outputId = "manualDeletionTutorial"))
                                      # ,h4("Open FiX3P: ",a("https://talenfisher.github.io/fix3p/",href = "https://talenfisher.github.io/fix3p/"))
                             )
                             #,
@@ -376,8 +387,8 @@ ui <- dashboardPage(
                                               numericInput(inputId = "maxNonMissingProp",
                                                            label = "Maximum Proportion of NAs per Cell",
                                                            value = .99,
-                                                           min = 0,
-                                                           max = 1),
+                                                           min = .0001,
+                                                           max = .9999),
                                               bsTooltip("maxNonMissingProp",title = "Enter maxmimum proportion that can be missing in a cell to be considered in comparison"),
                                               numericInput(inputId = "thetaRangeMin",
                                                            label = "Minimum Rotation Value (degrees)",
@@ -394,6 +405,7 @@ ui <- dashboardPage(
                                               numericInput(inputId = "thetaStep",
                                                            label = "Rotation Step Size (degrees)",
                                                            value = 3,
+                                                           step = 1,
                                                            min = 1),
                                               bsTooltip("thetaStep",title = "Enter distance  between consecutive rotations (in degrees)"),
                                               uiOutput("comparisonButtonMessage")
@@ -552,29 +564,35 @@ ui <- dashboardPage(
                                                    numericInput(inputId = "translationThreshold",
                                                                 label = "Translation Threshold (pixels)",
                                                                 value = 20,
-                                                                min = 0),
-                                                   
+                                                                step = 1,
+                                                                min = 1),
+                                                   bsTooltip("translationThreshold",title = "Enter a positive whole number."),
                                                    numericInput(inputId = "rotationThreshold",
                                                                 label = "Rotation Threshold (degrees)",
                                                                 value = 6,
                                                                 min = 0,
                                                                 max = 360),
+                                                   bsTooltip("rotationThreshold",title = "Enter a whole number between 0 and 360 degrees."),
                                                    # selectInput(inputId = "corrSelection",
                                                    #             label = "Correlation Measure",
                                                    #             choices = c("Pairwise-Complete Correlation","FFT-based CCF")),
                                                    numericInput(inputId = "corrThreshold",
                                                                 label = "Correlation Threshold",
                                                                 value = .50,
-                                                                min = 0,
-                                                                max = 1,
-                                                                step = .05),
+                                                                min = -1,
+                                                                max = 1),
+                                                   bsTooltip("corrThreshold",title = "Enter a number between -1 and 1."),
                                                    # numericInput(inputId = "highCMCThreshold",
                                                    #              label = "High CMC Threshold (tau)",
                                                    #              value = 1,
                                                    #              min = 1),
                                                    actionButton(inputId = "cmcPlotExecute",label = "Visualize CMCs")),
                                             column(width = 8,
-                                                   plotOutput(outputId = "cmcMethodPlot"))),
+                                                   plotOutput(outputId = "cmcMethodPlot"),
+                                                   # box(
+                                                     uiOutput(outputId = "cmcMethodInformation")
+                                                     # )
+                                                   )),
                                    # tabPanel("Machine Learning Model",
                                    # icon = fontawesome::fa_i("tree"),
                                    #          column(width = 2,

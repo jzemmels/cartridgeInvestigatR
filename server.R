@@ -59,7 +59,7 @@ server = function(input, output, session) {
                  showModal(modalDialog(
                    title = "Help: Import Tab",easyClose = TRUE,
                    strong("Why would I use this tab?"),
-                   "To upload x3p files to the app.",
+                   "Upload x3p files to the app.",
                    br(),
                    br(),
                    strong("What do I need to do before using this tab?"),
@@ -150,7 +150,7 @@ server = function(input, output, session) {
                    br(),
                    br(),
                    strong("What do I need to do before using this tab?"),
-                   "To have clicked the 'Skip Automatic Preprocessing' button in the 'Import' tab or the 'Perform Automatic Preprocessing' button in the 'Automatic Preprocess' tab.",
+                   "Click the 'Skip Automatic Preprocessing' button in the 'Import' tab or the 'Perform Automatic Preprocessing' button in the 'Automatic Preprocess' tab.",
                    br(),
                    br(),
                    strong("How do I use this tab?"),
@@ -166,7 +166,7 @@ server = function(input, output, session) {
                    br(),
                    "Start a new region by drawing a new rectangle on the plot of the full scan at the top of the page.",
                    "Once you are happy with the annotated regions, click 'Confirm Annotations' to delete these regions from the scan.",
-                   "If you would like to start over with manually annotating the selected scan, click the 'Reset Annotations' button.",
+                   "If you would like to start over with manually annotating the selected scan, click the 'Reset All Annotations' button.",
                    br(),
                    br(),
                    "Select another scan to manually delete regions from using the 'Select a processed scan to annotate' dropdown.",
@@ -196,6 +196,15 @@ server = function(input, output, session) {
     
     # pts <- isolate(plottedPoints$dat)
     
+    if(is.null(tmp$x3p_processed)){
+      
+      showNotification("Before manual deletion, use the Automatic Preprocess tab or click the 'Skip Automatic Preprocessing' button in the Import tab.",
+                       type = "error")
+      validate(need(tmp$x3p_processed,message = FALSE))
+    }
+    
+    
+    
     x3pManualPlt <<- x3pListPlot(list(tmp %>%
                                         # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
                                         filter(x3pName == input$x3prgl1_select) %>%
@@ -219,6 +228,8 @@ server = function(input, output, session) {
     req(input$x3prgl1_select != "")
     req(input$x3prgl1_select)
     
+    # browser()
+    
     output$zoomInMessage <- renderText({
       
       return("Zoom-in by drawing a rectangle on the scan")
@@ -226,10 +237,10 @@ server = function(input, output, session) {
     })
     
     # if needed, reset the ui elements below the selected scan
-    output$editPolygonSelect_ui <- NULL
+    # output$editPolygonSelect_ui <- NULL
     output$regionClickMessage <- NULL
     output$regionResetButton_ui <- NULL
-    output$newRegionMessage <- NULL
+    # output$newRegionMessage <- NULL
     
     # output$x3p1_ggplot_zoom <- NULL
     # output$x3p1_selectedPolygons <- NULL
@@ -244,7 +255,7 @@ server = function(input, output, session) {
     output$x3p1_rgl <- NULL
     
     selectedZoom <<- reactiveValues(dat = data.frame(x3p = character(0),
-                                                     group = character(0),
+                                                     group = numeric(0),
                                                      xmin = numeric(0),
                                                      xmax = numeric(0),
                                                      ymin = numeric(0),
@@ -253,7 +264,7 @@ server = function(input, output, session) {
     numRegions$val <<- 0
     
     
-    session$sendCustomMessage(type = "resetValue",message = "editPolygonSelect")
+    # session$sendCustomMessage(type = "resetValue",message = "editPolygonSelect")
   })
   
   # numRegions <- 0
@@ -264,7 +275,7 @@ server = function(input, output, session) {
   # create a globally-available data frame to update the zoomed-in region
   # as-needed.
   selectedZoom <- reactiveValues(dat = data.frame(x3p = character(0),
-                                                  group = character(0),
+                                                  group = numeric(0),
                                                   xmin = numeric(0),
                                                   xmax = numeric(0),
                                                   ymin = numeric(0),
@@ -277,49 +288,78 @@ server = function(input, output, session) {
     req(input$manualProcZoom$xmin)
     req(!is.null(input$manualProcZoom$xmin))
     
+    # browser()
+    
     pts <- isolate(plottedPoints$dat)
     
     pts <- pts %>%
       filter(x3p == input$x3prgl1_select)
-    
-    # browser()
     
     # the user may decide to redraw a rectangle without creating any points. In
     # this situation, we don't want to create a new region -- this if block
     # ensure this
     redrawnRectangle <- FALSE
     
-    if(numRegions$val > 0){
+    # if(numRegions$val > 0){
+    #   
+    #   pts_lastGroup <- pts %>%
+    #     filter(group == numRegions$val)
+    #   
+    #   # sometimes(?) this code is re-run despite there being no user-instigated
+    #   # change to the input$manualProcZoom variable. This boolean will check if
+    #   # the selectedZoom window hasn't changed
+    #   if(nrow(pts_lastGroup) > 0 & 
+    # ((input$manuaProcZoom$xmin != unique(selectedZoom$dat$xmin)) |
+    #  (input$manuaProcZoom$xmax != unique(selectedZoom$dat$xmax)) |
+    #   (input$manuaProcZoom$ymin != unique(selectedZoom$dat$ymin)) |
+    #    (input$manuaProcZoom$ymax != unique(selectedZoom$dat$ymax)))){
+    #     
+    #     numRegions$val <<- numRegions$val + 1
+    #     
+    #   }
+    #   else{
+    #     
+    #     # this variable is used when updating the zoom data frame down below
+    #     redrawnRectangle <- TRUE
+    #     
+    #   }
+    #   
+    # }
+    # else{
+    
+    # we only need to update the number of regions if the user has selected a
+    # different zoom window. For some reason, either the manualProcZoom or
+    # selectedZoom$dat values sometimes change by a small value - on the scale
+    # of 1e-11, so we'll compare the values on a rounded scale. If the window
+    # hasn't actually changed, then this should break it out of the observeEvent
+    # call
+    if(nrow(selectedZoom$dat) > 0){
       
-      pts_lastGroup <- pts %>%
-        filter(group == numRegions$val)
-      
-      if(nrow(pts_lastGroup) > 0){
-        
-        numRegions$val <<- numRegions$val + 1
-        
-      }
-      else{
-        
-        # this variable is used when updating the zoom data frame down below
-        redrawnRectangle <- TRUE
-        
-      }
-      
-    }
-    else{
-      
-      numRegions$val <<- numRegions$val + 1
+      req(abs(input$manualProcZoom$xmin - unique(selectedZoom$dat$xmin[numRegions$val])) > .001 |
+            abs(input$manualProcZoom$xmax - unique(selectedZoom$dat$xmax[numRegions$val])) > .001 | 
+            abs(input$manualProcZoom$ymin - unique(selectedZoom$dat$ymin[numRegions$val])) > .001 | 
+            abs(input$manualProcZoom$ymax - unique(selectedZoom$dat$ymax[numRegions$val])) > .001)
       
     }
     
-    output$editPolygonSelect_ui <- renderUI({
+    # }
+    
+    numRegions$val <<- numRegions$val + 1
+    
+    output$newRegion_ui <- renderUI({
       
-      return(selectInput(inputId = "editPolygonSelect",
-                         label = "Select Region to Edit",
-                         choices = numRegions$val:1))
+      return(actionButton(inputId = "newManualRegion",
+                          label = "Start a new region"))
       
     })
+    
+    # output$editPolygonSelect_ui <- renderUI({
+    #   
+    #   return(selectInput(inputId = "editPolygonSelect",
+    #                      label = "Select Region to Edit",
+    #                      choices = numRegions$val:1))
+    #   
+    # })
     
     # insert a new message about clicking on the plot
     output$regionClickMessage <- renderText({
@@ -328,7 +368,7 @@ server = function(input, output, session) {
       
     })
     
-    addTooltip(session = session,id = "editPolygonSelect",title = "Swap between annotated regions")
+    # addTooltip(session = session,id = "editPolygonSelect",title = "Swap between annotated regions")
     
     # insert a reset button
     output$regionResetButton_ui <- renderUI({
@@ -341,7 +381,7 @@ server = function(input, output, session) {
     
     # visualize the zoomed-in region
     pts_filtered <- pts %>%
-      filter(group == input$editPolygonSelect)
+      filter(group == numRegions$val)#input$editPolygonSelect)
     
     output$annotationConfirmationButton_ui <- renderUI({
       
@@ -352,128 +392,162 @@ server = function(input, output, session) {
     
     output$deleteAnnotationsButton_ui <- renderUI({
       
-      actionButton("deleteAnnotationsButton","Reset Annotations")
+      actionButton("deleteAnnotationsButton","Reset All Annotations")
       
     })
     
-    if(!is.null(input$editPolygonSelect)){
-      
-      zoom <- isolate(selectedZoom$dat)
-      
-      # if the user redrew the rectangle without creating a new region, then
-      # we'll take the most recent values in input$manualProcZoom
-      if(redrawnRectangle){
-        
-        zoom <- zoom %>%
-          mutate(xmin = ifelse(x3p == input$x3prgl1_select & group == input$editPolygonSelect,input$manualProcZoom$xmin,xmin),
-                 xmax = ifelse(x3p == input$x3prgl1_select & group == input$editPolygonSelect,input$manualProcZoom$xmax,xmax),
-                 ymin = ifelse(x3p == input$x3prgl1_select & group == input$editPolygonSelect,input$manualProcZoom$ymin,ymin),
-                 ymax = ifelse(x3p == input$x3prgl1_select & group == input$editPolygonSelect,input$manualProcZoom$ymax,ymax)) %>%
-          distinct()
-        
-      }
-      else{
-        
-        # otherwise, we're dealing with a new region and will update zoom with a
-        # new row
-        zoom <- bind_rows(zoom,
-                          data.frame(x3p = input$x3prgl1_select,
-                                     group = input$editPolygonSelect,
-                                     xmin = input$manualProcZoom$xmin,
-                                     xmax = input$manualProcZoom$xmax,
-                                     ymin = input$manualProcZoom$ymin,
-                                     ymax = input$manualProcZoom$ymax)) %>%
-          distinct()
-        
-      }
-      
-      selectedZoom$dat <<- zoom
-      
-    }
-  })
-  
-  observeEvent(input$editPolygonSelect,{
-    
-    req(input$editPolygonSelect)
-    
+    # if(!is.null(input$editPolygonSelect)){
+    #   
     zoom <- isolate(selectedZoom$dat)
+    #   
+    #   # if the user redrew the rectangle without creating a new region, then
+    #   # we'll take the most recent values in input$manualProcZoom
+    #   if(redrawnRectangle){
+    #     
+    #     zoom <- zoom %>%
+    #       mutate(xmin = ifelse(x3p == input$x3prgl1_select & group == input$editPolygonSelect,input$manualProcZoom$xmin,xmin),
+    #              xmax = ifelse(x3p == input$x3prgl1_select & group == input$editPolygonSelect,input$manualProcZoom$xmax,xmax),
+    #              ymin = ifelse(x3p == input$x3prgl1_select & group == input$editPolygonSelect,input$manualProcZoom$ymin,ymin),
+    #              ymax = ifelse(x3p == input$x3prgl1_select & group == input$editPolygonSelect,input$manualProcZoom$ymax,ymax)) %>%
+    #       distinct()
+    #     
+    #   }
+    #   else{
     
+    # otherwise, we're dealing with a new region and will update zoom with a
+    # new row
     zoom <- bind_rows(zoom,
                       data.frame(x3p = input$x3prgl1_select,
-                                 group = input$editPolygonSelect,
+                                 group = as.numeric(numRegions$val),#input$editPolygonSelect,
                                  xmin = input$manualProcZoom$xmin,
                                  xmax = input$manualProcZoom$xmax,
                                  ymin = input$manualProcZoom$ymin,
                                  ymax = input$manualProcZoom$ymax)) %>%
       distinct()
     
+    if(nrow(zoom) > {zoom %>% select(-group) %>% distinct() %>% nrow()}){
+      
+      # browser()
+      
+      zoom <- zoom %>% slice(1:(nrow(zoom) - 1))
+      
+    }
+    
+    # }
+    
     selectedZoom$dat <<- zoom
     
-  })
-  
-  output$x3p1_selectedPolygons <-
-    shiny::renderTable({
+    # remove the message about starting a new region until the button is
+    # clicked again
+    # output$newRegionMessage <- ""
+    
+    # }
+    
+    output$x3p1_selectedPolygons <-
+      shiny::renderTable({
+        
+        req(plottedPoints$dat)
+        # req(input$editPolygonSelect)
+        
+        pts <- isolate(plottedPoints$dat)
+        
+        ret <- pts %>% 
+          filter(x3p == input$x3prgl1_select & group == numRegions$val) %>% #& group == input$editPolygonSelect) %>%
+          mutate(x = as.integer(round(x)),
+                 y = as.integer(round(y)),
+                 pointNum = as.integer(pointNum),
+                 group = factor(group)) %>%
+          rename(Scan = x3p,
+                 `Region Number` = group,
+                 Point = pointNum,
+                 Column = x,
+                 Row = y) %>%
+          select(c(Scan,`Region Number`,Point,Column,Row))
+        
+        return(ret)
+        
+      })
+    
+    # once the manualProcZoom variable is updated, visualize the zoomed-in part. 
+    output$x3p1_ggplot_zoom <- renderPlot({
       
       req(plottedPoints$dat)
-      req(input$editPolygonSelect)
+      req(input$x3prgl1_select != "")
+      req(input$manualProcZoom)
+      # req(input$editPolygonSelect)
       
       pts <- isolate(plottedPoints$dat)
       
-      ret <- pts %>% 
-        filter(x3p == input$x3prgl1_select & group == input$editPolygonSelect) %>%
-        mutate(x = as.integer(round(x)),
-               y = as.integer(round(y)),
-               pointNum = as.integer(pointNum),
-               group = factor(group)) %>%
-        rename(Scan = x3p,
-               `Region Number` = group,
-               Point = pointNum,
-               Column = x,
-               Row = y) %>%
-        select(c(Scan,`Region Number`,Point,Column,Row))
+      # browser()
       
-      return(ret)
+      pts <- pts %>%
+        filter(x3p == input$x3prgl1_select)
+      
+      pts_filtered <- pts %>%
+        filter(group == numRegions$val)#input$editPolygonSelect)
+      
+      zoom <- isolate(selectedZoom$dat)
+      
+      zoom <- zoom %>%
+        filter(group == numRegions$val)#input$editPolygonSelect)
+      
+      req(nrow(zoom) == 1)
+      
+      x3pManualPlt_zoom <- x3pManualPlt +
+        coord_fixed(xlim = c(unique(zoom$xmin),unique(zoom$xmax)),
+                    ylim = c(unique(zoom$ymin),unique(zoom$ymax)),
+                    expand = FALSE,
+                    ratio = 1) +
+        geom_point(data = pts_filtered,
+                   aes(x=x,y=y)) +
+        geom_polygon(data = pts_filtered,
+                     aes(x=x,y=y,group = group),inherit.aes = FALSE,fill = "black",alpha = .2) +
+        ggrepel::geom_text_repel(data = pts_filtered,
+                                 aes(x=x,y=y,label = pointNum),inherit.aes = FALSE)
+      
+      return(x3pManualPlt_zoom)
       
     })
+  })
   
-  # once the manualProcZoom variable is updated, visualize the zoomed-in part. 
-  output$x3p1_ggplot_zoom <- renderPlot({
+  # observeEvent(input$editPolygonSelect,{
+  #   
+  #   req(input$editPolygonSelect)
+  #   
+  #   zoom <- isolate(selectedZoom$dat)
+  #   
+  #   zoom <- bind_rows(zoom,
+  #                     data.frame(x3p = input$x3prgl1_select,
+  #                                group = input$editPolygonSelect,
+  #                                xmin = input$manualProcZoom$xmin,
+  #                                xmax = input$manualProcZoom$xmax,
+  #                                ymin = input$manualProcZoom$ymin,
+  #                                ymax = input$manualProcZoom$ymax)) %>%
+  #     distinct()
+  #   
+  #   selectedZoom$dat <<- zoom
+  #   
+  # })
+  
+  observeEvent(input$newManualRegion,{
     
     req(plottedPoints$dat)
-    req(input$x3prgl1_select != "")
-    req(input$manualProcZoom)
-    req(input$editPolygonSelect)
+    req(nrow(plottedPoints$dat) > 1)
     
-    pts <- isolate(plottedPoints$dat)
+    # show new message about how to create a new region
+    output$newRegion_ui <- renderUI({
+      
+      return(HTML("<h5>To start a new region, draw a new rectangle on the plot above.</h5>"))
+      
+    })
     
-    # browser()
+    output$x3p1_ggplot_zoom <- renderPlot({
+      
+      ggplot(data.frame(x=1))
+      
+    })
     
-    pts <- pts %>%
-      filter(x3p == input$x3prgl1_select)
-    
-    pts_filtered <- pts %>%
-      filter(group == input$editPolygonSelect)
-    
-    zoom <- isolate(selectedZoom$dat)
-    
-    zoom <- zoom %>%
-      filter(group == input$editPolygonSelect)
-    
-    req(nrow(zoom) == 1)
-    
-    x3pManualPlt_zoom <- x3pManualPlt +
-      coord_fixed(xlim = c(unique(zoom$xmin),unique(zoom$xmax)),
-                  ylim = c(unique(zoom$ymin),unique(zoom$ymax)),
-                  expand = FALSE,
-                  ratio = 1) +
-      geom_point(data = pts_filtered,
-                 aes(x=x,y=y)) +
-      geom_polygon(data = pts_filtered,
-                   aes(x=x,y=y,group = group),inherit.aes = FALSE,fill = "black",alpha = .2) +
-      ggrepel::geom_text_repel(data = pts_filtered,
-                               aes(x=x,y=y,label = pointNum),inherit.aes = FALSE)
-    
-    return(x3pManualPlt_zoom)
+    output$regionResetButton_ui <- NULL
     
   })
   
@@ -483,29 +557,22 @@ server = function(input, output, session) {
     pts <- isolate(plottedPoints$dat)
     
     pts_filtered <- pts %>%
-      filter(x3p == input$x3prgl1_select & group == input$editPolygonSelect)
+      filter(x3p == input$x3prgl1_select & group == numRegions$val)#& group == input$editPolygonSelect)
     
     pts <- bind_rows(pts,
                      data.frame(x = input$pointPlacement_zoom$x,
                                 y = input$pointPlacement_zoom$y,
-                                group = as.numeric(input$editPolygonSelect),
+                                group = numRegions$val,
+                                # group = as.numeric(input$editPolygonSelect),
                                 pointNum =ifelse(nrow(pts_filtered) == 0,1,max(pts_filtered$pointNum) + 1),
                                 x3p = input$x3prgl1_select) %>%
                        arrange(x3p,group,pointNum))
     
     plottedPoints$dat <<- pts
     
-    
-    # show new message about how to create a new region
-    output$newRegionMessage <- renderText({
-      
-      return("To start a new region, draw a new rectangle on the plot above.")
-      
-    })
-    
     output$confirmationMessage <- renderText({
       
-      return("Once you're done annotating, press 'Confirm Annotations' to lock them in and view a visualization of the scan with deleted regions.\nClicking 'Reset Annotations' will clear all annotations made on the selected x3p.")
+      return("Once you're done annotating, press 'Confirm Annotations' to lock them in and view a visualization of the scan with deleted regions.\nClicking 'Reset All Annotations' will clear all annotations made on the selected x3p.")
       
     })
     
@@ -518,7 +585,7 @@ server = function(input, output, session) {
     pts <- isolate(plottedPoints$dat)
     
     pts <- pts %>%
-      filter(x3p == input$x3prgl1_select & !(group == input$editPolygonSelect))
+      filter(x3p == input$x3prgl1_select & !(group == numRegions$val)) #& !(group == input$editPolygonSelect))
     
     plottedPoints$dat <<- pts
     
@@ -654,19 +721,19 @@ server = function(input, output, session) {
     tmp <- isolate(shiny.r$data)
     
     # delete the mask added to the x3p
-    x3pMask <- tmp %>%
-      # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
-      filter(x3pName == input$x3prgl1_select) %>%
-      pull(x3p_processed) %>%
-      .[[1]]
-    
-    x3pMask$mask <- NULL
+    # x3pMask <- tmp %>%
+    #   # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
+    #   filter(x3pName == input$x3prgl1_select) %>%
+    #   pull(x3p_processed) %>%
+    #   .[[1]]
+    # 
+    # x3pMask$mask <- NULL
     
     tmp <- tmp %>%
       # mutate(x3pName = paste0("x3p",1:nrow(.))) %>%
-      mutate(x3p = ifelse(x3pName == input$x3prgl1_select,
-                          list(x3pMask),
-                          x3p))
+      mutate(x3p_processed = ifelse(x3pName == input$x3prgl1_select,
+                                    x3p,
+                                    x3p_processed))
     
     shiny.r$data <<- tmp
     
@@ -680,16 +747,24 @@ server = function(input, output, session) {
     
     output$x3p1_rgl <- NULL
     
+    output$x3p1_ggplot_zoom <- renderPlot({
+      
+      ggplot(data.frame(x=1))
+      
+    })
+    
+    numRegions$val <<- 0
+    
+    selectedZoom$dat <<- data.frame(x3p = character(0),
+                                   group = numeric(0),
+                                   xmin = numeric(0),
+                                   xmax = numeric(0),
+                                   ymin = numeric(0),
+                                   ymax = numeric(0))
+    
     output$deleteAnnotationsMessage <- renderText({
       
-      if(!is.null(tmp$x3p_processed)){
-        
-        return("Annotations have been deleted. You will need to redo the preprocessing in the next tab to restore the annotated regions.")
-        
-      }
-      else{
-        return("Annotations have been deleted.")
-      }
+      return("Annotations have been reset. Draw a new rectangle on the plot above to start over")
       
     })
     
@@ -748,7 +823,7 @@ server = function(input, output, session) {
                    br(),
                    br(),
                    strong("What do I need to do before using this tab?"),
-                   "To have uploaded scans in the Import tab.",
+                   "Upload scans in the Import tab.",
                    br(),
                    br(),
                    strong("How do I use this tab?"),
@@ -808,8 +883,6 @@ server = function(input, output, session) {
     
     id <- Id()('input',ctn)
     selection <- Id()('letter',ctn)
-    
-    # 
     
     output[[id]] <- renderUI({
       req(input[[Id()('letter',ctn)]])
@@ -871,6 +944,13 @@ server = function(input, output, session) {
     # a number
     preProcessSteps <- tmpInput[stringr::str_detect(names(tmpInput),"letter")]
     
+    if(length(preProcessSteps) == 0){
+      
+      showNotification("You haven't selected any preprocessing steps. Either add a preprocessing step or click 'Skip Automatic Preprocessing' on the 'Import' tab to skip.",type = "error")
+      validate(need(length(preProcessSteps) > 0,"No preprocessing steps selected. Either add a preprocessing step or click 'Skip Automatic Preprocessing' on the 'Import' tab to skip."))
+      
+    }
+    
     # the steps may be out of order depending on which was last updated by
     # the user. this will correct the order
     preProcessSteps <- preProcessSteps[order(names(preProcessSteps))]
@@ -882,6 +962,7 @@ server = function(input, output, session) {
                                           
                                           # get the parameters
                                           paramValues <- tmpInput[names(tmpInput) %in% paste0("params",c(1,2),"_",ind)]
+                                          
                                           
                                           # returns a preprocessing function with the necessary parameters
                                           # filled-in
@@ -1045,7 +1126,7 @@ server = function(input, output, session) {
                  showModal(modalDialog(
                    title = "Help: Comparison Parameters Tab",easyClose = TRUE,
                    strong("Why would I use this tab?"),
-                   "To compare two processed cartridge cases.",
+                   "Compare two processed cartridge cases.",
                    br(),
                    br(),
                    strong("What do I need to do before using this tab?"),
@@ -1072,6 +1153,9 @@ server = function(input, output, session) {
     
     req(input$referenceSelect != "")
     
+    validate(need(input$referenceSelect,"Select a reference scan!"),
+             need(0 <= input$maxNonMissingProp & input$maxNonMissingProp <= 1,"Enter a value between 0 and 1 to Maxmimum Proportion of NAs per Cell"))
+    
     # # shinybusy::show_modal_spinner(spin = "fingerprint", text = "Preparing Reference Scan")
     
     tmp <- isolate(shiny.r$data)
@@ -1082,6 +1166,8 @@ server = function(input, output, session) {
       stringr::str_split(",") %>%
       .[[1]] %>%
       purrr::map_int(as.integer)
+    
+    validate(need(length(cellGrid) == 2,"Enter cell grid size as two comma-separated numbers (e.g., 8,8)"))
     
     referenceCell_df <- tmp %>%
       mutate(x3pNames = paste0("x3p",1:nrow(.))) %>%
@@ -1158,6 +1244,8 @@ server = function(input, output, session) {
     
     req(input$targetSelect != "")
     
+    need(input$targetSelect,"Select a target scan!")
+    
     # shinybusy::show_modal_spinner(spin = "fingerprint", text = "Visualizing Target Scan")
     
     tmp <- isolate(shiny.r$data)
@@ -1184,6 +1272,10 @@ server = function(input, output, session) {
     
     req(shiny.r$data)
     req(shiny.r$data$x3p_processed)
+    
+    validate(need(input$referenceSelect,"Select a reference scan!"),
+             need(input$targetSelect,"Select a target scan!"),
+             need(0 <= input$maxNonMissingProp & input$maxNonMissingProp <= 1,"Enter a value between 0 and 1 to Maxmimum Proportion of NAs per Cell"))
     
     tmp <- isolate(shiny.r$data)
     
@@ -1302,6 +1394,11 @@ server = function(input, output, session) {
     req(shiny.r$data)
     req(shiny.r$data$x3p_processed)
     
+    validate(need(input$referenceSelect,"Select a reference scan!"),
+             need(input$targetSelect,"Select a target scan!"),
+             need(0 <= input$maxNonMissingProp & input$maxNonMissingProp <= 1,"Enter a value between 0 and 1 to Maxmimum Proportion of NAs per Cell"),
+             need(input$thetaRangeMin <= input$thetaRangeMax,"Enter a minimum rotation value that is less than the maximum rotation value."))
+    
     # # shinybusy::show_modal_spinner(spin = "fingerprint", text = "Performing Comparisons")
     
     thetas <- seq(from = input$thetaRangeMin,to = input$thetaRangeMax,by = input$thetaStep)
@@ -1312,6 +1409,8 @@ server = function(input, output, session) {
       stringr::str_split(",") %>%
       .[[1]] %>%
       purrr::map_int(as.integer)
+    
+    validate(need(length(cellGrid) == 2,"Enter cell grid size as two comma-separated numbers (e.g., 8,8)"))
     
     reference <- tmp %>%
       mutate(x3pNames = paste0("x3p",1:nrow(.))) %>%
@@ -1332,13 +1431,59 @@ server = function(input, output, session) {
                       1:length(thetas),
                       function(theta,ind){
                         
-                        dat <- cmcR::comparison_allTogether(reference = reference,
-                                                            target = target,
-                                                            theta = theta,
-                                                            numCells = cellGrid,
-                                                            maxMissingProp = input$maxNonMissingProp,
-                                                            sideLengthMultiplier = 3,
-                                                            returnX3Ps = TRUE)
+                        dat <- reference %>% 
+                          comparison_cellDivision(cellGrid) %>% 
+                          dplyr::mutate(cellPropMissing = comparison_calcPropMissing(.data$cellHeightValues), 
+                                        refMissingCount = purrr::map_dbl(.data$cellHeightValues, 
+                                                                         ~sum(is.na(.$surface.matrix)))) %>%
+                          filter(.data$cellPropMissing <= input$maxNonMissingProp) %>% 
+                          dplyr::mutate(regionHeightValues = comparison_getTargetRegions(cellHeightValues = .data$cellHeightValues, 
+                                                                                         target = target, theta = theta, 
+                                                                                         sideLengthMultiplier = 3)) %>% 
+                          dplyr::mutate(targMissingProp = comparison_calcPropMissing(.data$regionHeightValues), 
+                                        targMissingCount = purrr::map_dbl(.data$regionHeightValues, 
+                                                                          ~sum(is.na(.$surface.matrix)))) %>% 
+                          dplyr::filter(.data$targMissingProp <= input$maxNonMissingProp) 
+                        
+                        if(nrow(dat) == 0){
+                          
+                          remove_modal_progress()
+                          
+                          showNotification("Comparison could not be completed. Try increasing the Maximum Proportion of NAs per Cell.",type = "error")
+                          
+                          validate(need(nrow(dat) > 0,"Comparison could not be completed. Try increasing the Maximum Proportion of NAs per Cell."))
+                          
+                        }
+                        
+                        dat <- dat %>% 
+                          dplyr::mutate(cellHeightValues = comparison_standardizeHeights(.data$cellHeightValues), 
+                                        regionHeightValues = comparison_standardizeHeights(.data$regionHeightValues)) %>% 
+                          dplyr::mutate(cellHeightValues_replaced = comparison_replaceMissing(.data$cellHeightValues), 
+                                        regionHeightValues_replaced = comparison_replaceMissing(.data$regionHeightValues)) %>% 
+                          dplyr::mutate(fft_ccf_df = comparison_fft_ccf(cellHeightValues = .data$cellHeightValues_replaced, 
+                                                                        regionHeightValues = .data$regionHeightValues_replaced)) %>% 
+                          dplyr::mutate(alignedTargetCell = comparison_alignedTargetCell(cellHeightValues = .data$cellHeightValues, 
+                                                                                         regionHeightValues = .data$regionHeightValues, target = target, 
+                                                                                         theta = theta, fft_ccf_df = .data$fft_ccf_df)) %>% 
+                          dplyr::mutate(jointlyMissing = purrr::map2_dbl(.data$cellHeightValues, 
+                                                                         .data$alignedTargetCell, ~sum(is.na(.x$surface.matrix) & 
+                                                                                                         is.na(.y$surface.matrix))), 
+                                        pairwiseCompCor = purrr::map2_dbl(.data$cellHeightValues, 
+                                                                          .data$alignedTargetCell, ~cor(c(.x$surface.matrix), 
+                                                                                                        c(.y$surface.matrix), use = "pairwise.complete.obs"))) %>% 
+                          tidyr::unnest(.data$fft_ccf_df) %>% dplyr::mutate(theta = theta) %>%
+                          dplyr::select(.data$cellIndex, .data$x, 
+                                        .data$y, .data$fft_ccf, .data$pairwiseCompCor, .data$theta, 
+                                        .data$refMissingCount, .data$targMissingCount, .data$jointlyMissing, 
+                                        .data$cellHeightValues, .data$alignedTargetCell)
+                        
+                        # dat <- cmcR::comparison_allTogether(reference = reference,
+                        #                                     target = target,
+                        #                                     theta = theta,
+                        #                                     numCells = cellGrid,
+                        #                                     maxMissingProp = input$maxNonMissingProp,
+                        #                                     sideLengthMultiplier = 3,
+                        #                                     returnX3Ps = TRUE)
                         
                         update_modal_progress(value = (ind)*(1/length(thetas)),
                                               text = paste0("Comparing reference vs. target scans at rotation ",theta,"°"))
@@ -1463,7 +1608,7 @@ server = function(input, output, session) {
                  showModal(modalDialog(
                    title = "Help: Comparison Results - Summary Tab",easyClose = TRUE,
                    strong("Why would I use this tab?"),
-                   "To explore the distribution of similarity features extracted from the comparison procedure executed in the 'Comparison Parameters' tab.",
+                   "Explore the distribution of similarity features extracted from the comparison procedure executed in the 'Comparison Parameters' tab.",
                    br(),
                    br(),
                    strong("What do I need to do before using this tab?"),
@@ -1779,9 +1924,9 @@ server = function(input, output, session) {
                  showModal(modalDialog(
                    title = "Help: Comparison Results - Individual Cells Tab",easyClose = TRUE,
                    strong("Why would I use this tab?"),
-                   "To explore the registrations of individual reference cells.",
+                   "Explore the registrations of individual reference cells.",
                    # "For example, in the 'Comparison Results - Summary' tab you may identify cells that exhibit erratic behavior",
-                   "Use this tab to zoom into a cell and identify potential causes for notable behavior.",
+                   "Use this tab to zoom into a cell and identify potential causes for noteworthy behavior.",
                    br(),
                    br(),
                    strong("What do I need to do before using this tab?"),
@@ -2338,7 +2483,7 @@ server = function(input, output, session) {
                  showModal(modalDialog(
                    title = "Help: Custom Cell Tab",easyClose = TRUE,
                    strong("Why would I use this tab?"),
-                   "To draw your own cell on a reference scan to compare to a target scan",
+                   "Draw your own cell on a reference scan to compare to a target scan",
                    "For example, you may identify a region of interest on a scan after a visual inspection (e.g., in the Preprocessing stage) or after studying the comparison results (e.g., using the 'Comparison Results' tabs)",
                    br(),
                    br(),
@@ -2385,6 +2530,9 @@ server = function(input, output, session) {
     
     req(shiny.r$data)
     req(input$customCellSelection != "")
+    
+    validate(need(input$referenceSelect,"Select a reference scan!"),
+             need(input$thetaRangeMin <= input$thetaRangeMax,"Enter a minimum rotation value that is less than the maximum rotation value."))
     
     tmp <- isolate(shiny.r$data)
     
@@ -2447,6 +2595,8 @@ server = function(input, output, session) {
       req(input$customCellBrush)
       req(input$customCellType == "Hand-drawn")
       
+      validate(need(input$referenceSelect,"Select a reference scan!"))
+      
       customCellPlt_zoom <- customCellPlt +
         coord_fixed(xlim = c(unique(input$customCellBrush$xmin),unique(input$customCellBrush$xmax)),
                     ylim = c(unique(input$customCellBrush$ymin),unique(input$customCellBrush$ymax)),
@@ -2494,6 +2644,10 @@ server = function(input, output, session) {
     tmp <- isolate(shiny.r$data)
     
     selectedScan <- input$customCellSelection
+    
+    validate(need(input$customCellSelection,"Select a reference scan!"),
+             need(input$targetSelect_customCell,"Select a target scan!"),
+             need(input$thetaRangeMin_customCell <= input$thetaRangeMax_customCell,"Enter a minimum rotation value that is less than the maximum rotation value."))
     
     reference <- tmp %>%
       mutate(x3pNames = paste0("x3p",1:nrow(.))) %>%
@@ -2645,7 +2799,7 @@ server = function(input, output, session) {
                  showModal(modalDialog(
                    title = "Help: Congruent Matching Cells Tab",easyClose = TRUE,
                    strong("Why would I use this tab?"),
-                   "To measure the similarity between two cartridge cases using the Congruent Matching Cells method.",
+                   "Measure the similarity between two cartridge cases using the Congruent Matching Cells method.",
                    br(),
                    br(),
                    strong("What do I need to do before using this tab?"),
@@ -2668,83 +2822,88 @@ server = function(input, output, session) {
   
   observeEvent(input$cmcPlotExecute,{
     
+    req(shiny.r$data)
+    req(shiny.r$comparisonData_refToTarget)
+    
+    # browser()
+    
+    validate(need(input$cmcMethodReferenceSelect,"Select a reference scan!"),
+             need(is.integer(input$translationThreshold) & input$translationThreshold > 0,"Enter a positive whole number for the Translation Threshold."),
+             need(is.integer(input$rotationThreshold) & input$rotationThreshold >= 0,"Enter a positive whole number for the Rotation Threshold"),
+             need(-1 <= input$corrThreshold & input$corrThreshold <= 1,"Enter a value between -1 and 1 for the Correlation Threshold. A value between 0 and 1 usually works well."))
+    
+    comparisonData_refToTarget <- isolate(shiny.r$comparisonData_refToTarget)
+    
+    req(input$cmcMethodReferenceSelect)
+    # req(input$cmcMethodTargetSelect)
+    selectedScan <- input$cmcMethodReferenceSelect
+    # if we're performing a self-comparison...
+    if(length(unique(c(input$referenceSelect,input$targetSelect))) == 1){
+      
+      otherScan <- input$cmcMethodReferenceSelect
+      
+      compData <- comparisonData_refToTarget
+      
+    }
+    # otherwise there are two disticnt scans selected
+    else{
+      
+      otherScan <- c(input$referenceSelect,input$targetSelect)[which(c(input$referenceSelect,input$targetSelect) != input$cmcMethodReferenceSelect)]
+      
+      comparisonData_targetToRef <- isolate(shiny.r$comparisonData_targetToRef)
+      
+      compData <- list(comparisonData_refToTarget,comparisonData_targetToRef)[[which(c(input$referenceSelect,input$targetSelect) == input$cmcMethodReferenceSelect)]]
+      
+    }
+    
+    tmp <- isolate(shiny.r$data)
+    
+    reference <- tmp %>%
+      mutate(x3pNames = paste0("x3p",1:nrow(.))) %>%
+      filter(x3pNames == selectedScan) %>%
+      pull(x3p_processed) %>%
+      .[[1]]
+    
+    target <- tmp %>%
+      mutate(x3pNames = paste0("x3p",1:nrow(.))) %>%
+      filter(x3pNames == otherScan) %>%
+      pull(x3p_processed) %>%
+      .[[1]]
+    
+    compData <- compData %>%
+      mutate(cmcClassif = cmcR::decision_CMC(cellIndex = cellIndex,
+                                             x=x,
+                                             y=y,
+                                             theta=theta,
+                                             corr = pairwiseCompCor,
+                                             # corr=ifelse(input$corrSelection == "Pairwise-Complete Correlation",!!("pairwiseCompCor"),!!("fft_ccf")),
+                                             xThresh = input$translationThreshold,
+                                             thetaThresh = input$rotationThreshold,
+                                             corrThresh = input$corrThreshold))
+    
+    cmcs <- compData %>%
+      filter(cmcClassif == "CMC")
+    
+    nonCMCs <- compData %>%
+      filter(!(cellIndex %in% cmcs$cellIndex)) %>%
+      group_by(cellIndex) %>%
+      filter(pairwiseCompCor == max(pairwiseCompCor)) %>%
+      ungroup()
+    # group_split() %>%
+    # map_dfr(function(dat){
+    #   
+    #   if(nrow(dat) > 0){
+    #     
+    #     # corDat <- ifelse(input$corrSelection == "Pairwise-Complete Correlation",dat$pairwiseCompCor,dat$fft_ccf)
+    #     
+    #     return(dat %>%
+    #              slice(which.max(corDat)))
+    #     
+    #   }
+    #   
+    # })
+    
     output$cmcMethodPlot <- renderPlot({
-      
-      req(shiny.r$data)
-      req(shiny.r$comparisonData_refToTarget)
-      
-      # browser()
-      
-      comparisonData_refToTarget <- isolate(shiny.r$comparisonData_refToTarget)
-      
-      req(input$cmcMethodReferenceSelect)
-      # req(input$cmcMethodTargetSelect)
-      selectedScan <- input$cmcMethodReferenceSelect
-      # if we're performing a self-comparison...
-      if(length(unique(c(input$referenceSelect,input$targetSelect))) == 1){
-        
-        otherScan <- input$cmcMethodReferenceSelect
-        
-        compData <- comparisonData_refToTarget
-        
-      }
-      # otherwise there are two disticnt scans selected
-      else{
-        
-        otherScan <- c(input$referenceSelect,input$targetSelect)[which(c(input$referenceSelect,input$targetSelect) != input$cmcMethodReferenceSelect)]
-        
-        comparisonData_targetToRef <- isolate(shiny.r$comparisonData_targetToRef)
-        
-        compData <- list(comparisonData_refToTarget,comparisonData_targetToRef)[[which(c(input$referenceSelect,input$targetSelect) == input$cmcMethodReferenceSelect)]]
-        
-      }
-      
-      tmp <- isolate(shiny.r$data)
-      
-      reference <- tmp %>%
-        mutate(x3pNames = paste0("x3p",1:nrow(.))) %>%
-        filter(x3pNames == selectedScan) %>%
-        pull(x3p_processed) %>%
-        .[[1]]
-      
-      target <- tmp %>%
-        mutate(x3pNames = paste0("x3p",1:nrow(.))) %>%
-        filter(x3pNames == otherScan) %>%
-        pull(x3p_processed) %>%
-        .[[1]]
-      
-      compData <- compData %>%
-        mutate(cmcClassif = cmcR::decision_CMC(cellIndex = cellIndex,
-                                               x=x,
-                                               y=y,
-                                               theta=theta,
-                                               corr = pairwiseCompCor,
-                                               # corr=ifelse(input$corrSelection == "Pairwise-Complete Correlation",!!("pairwiseCompCor"),!!("fft_ccf")),
-                                               xThresh = input$translationThreshold,
-                                               thetaThresh = input$rotationThreshold,
-                                               corrThresh = input$corrThreshold))
-      
-      cmcs <- compData %>%
-        filter(cmcClassif == "CMC")
-      
-      nonCMCs <- compData %>%
-        filter(!(cellIndex %in% cmcs$cellIndex)) %>%
-        group_by(cellIndex) %>%
-        filter(pairwiseCompCor == max(pairwiseCompCor)) %>%
-        ungroup()
-        # group_split() %>%
-        # map_dfr(function(dat){
-        #   
-        #   if(nrow(dat) > 0){
-        #     
-        #     # corDat <- ifelse(input$corrSelection == "Pairwise-Complete Correlation",dat$pairwiseCompCor,dat$fft_ccf)
-        #     
-        #     return(dat %>%
-        #              slice(which.max(corDat)))
-        #     
-        #   }
-        #   
-        # })
       
       plt <- cmcR::cmcPlot(reference = reference,
                            target = target,
@@ -2752,6 +2911,36 @@ server = function(input, output, session) {
                            cmcCol = "cmcClassif")
       
       return(plt)
+      
+    })
+    
+    output$cmcMethodInformation <- renderUI({
+      
+      cmcCount <- nrow(cmcs)
+      
+      maxCorrData <- compData %>%
+        group_by(cellIndex) %>%
+        filter(pairwiseCompCor == max(pairwiseCompCor)) %>%
+        ungroup()
+      
+      estimated_theta <-  maxCorrData %>%
+        pull(theta) %>%
+        median()
+      
+      estimated_x <- maxCorrData %>%
+        pull(x) %>%
+        median()
+      
+      estimated_y <- maxCorrData %>%
+        pull(y) %>%
+        median()
+      
+      ret <- tags$div(h5(tags$strong("CMC Count: "),cmcCount),
+                      h5(tags$strong("Estimated Rotation: "),estimated_theta," degrees"),
+                      h5(tags$strong("Estimated Shift: "),abs(estimated_x)," pixels ",ifelse(estimated_x < 0,"left","right"),", ",
+                         abs(estimated_y)," pixels ",ifelse(estimated_y < 0,"down","up"),"."))
+      
+      return(ret)
       
     })
     

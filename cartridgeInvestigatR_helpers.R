@@ -195,12 +195,30 @@ preProcess_params <- function(preProcStep,ind){
 # return a preprocessing function that with necessary parameters filled-in
 preProcess_partial <- function(preProcStep,paramValues){
   
+  # browser()
+  
   if(preProcStep == "Downsample"){
+    
+    if((paramValues[[1]] <= 0) | ((paramValues[[1]] %% 1) != 0)){
+      
+      showNotification("Enter a positive whole number for the Stride parameter of the Downsample step",type = "error")
+      validate(need(paramValues[[1]] > 0 & ((paramValues[[1]] %% 1) == 0),message = FALSE))
+      
+    }
     
     return(purrr::partial(x3ptools::x3p_sample,m = !!paramValues[[1]]))
     
   }
   if(preProcStep == "Crop"){
+    
+    cropOffset <- paramValues[[which(str_detect(string = names(paramValues),pattern = "params2"))]]
+    
+    if(((cropOffset %% 1) != 0)){
+      
+      showNotification("Enter a positive whole number for the Stride parameter of the Downsample step",type = "error")
+      validate(need(((cropOffset %% 1) == 0),message = FALSE))
+      
+    }
     
     return(purrr::partial(cmcR::preProcess_crop,region = tolower(!!paramValues[[1]]),offset = !!paramValues[[2]]))
     
@@ -218,6 +236,15 @@ preProcess_partial <- function(preProcStep,paramValues){
   }
   if(preProcStep == "Erode"){
     
+    erodeRadius <- paramValues[[which(str_detect(string = names(paramValues),pattern = "params2"))]]
+    
+    if((erodeRadius <= 0) | ((erodeRadius %% 1) != 0)){
+      
+      showNotification("Enter a positive whole number for the Radius parameter of the Erode step",type = "error")
+      validate(need(erodeRadius > 0 & ((erodeRadius %% 1) == 0),message = FALSE))
+      
+    }
+    
     return(purrr::partial(cmcR::preProcess_erode,region = tolower(!!paramValues[[1]]),morphRadius = !!paramValues[[2]]))
     
   }
@@ -231,11 +258,30 @@ preProcess_partial <- function(preProcStep,paramValues){
       purrr::map_dbl(as.numeric)
     
     if(paramValues[[1]] == "Lowpass"){
+      
+      if(length(filtParams) != 1 | any(filtParams) <= 0){
+        
+        showNotification("Enter one positive whole number for the Wavelength parameter of the Filter step",type = "error")
+        validate(need(length(filtParams) == 1 & all(filtParams) > 0,message = FALSE))
+        
+      }
+      
       return(purrr::partial(cmcR::preProcess_gaussFilter,wavelength = !!filtParams,filtertype = "lp"))
-    }
+    
+      
+      }
     else{
+      
+      if(length(filtParams) != 2 | any(filtParams) <= 0){
+        
+        showNotification("Enter two positive, comma-separated whole numbers for the Wavelengths parameter of the Filter step",type = "error")
+        validate(need(length(filtParams) == 2 & all(filtParams) > 0,message = FALSE))
+        
+      }
+      
       return(purrr::partial(cmcR::preProcess_gaussFilter,wavelength = !!filtParams,filtertype = "bp"))
-    }
+      
+      }
     
     
   }
