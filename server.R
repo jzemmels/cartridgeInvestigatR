@@ -1424,6 +1424,22 @@ server = function(input, output, session) {
       pull(x3p_processed) %>%
       .[[1]]
     
+    # rarely, the resolution of two scans are barely different from one another
+    # (on the order of 1e-10). This forces the resolutions to be the same
+    if(!isTRUE(all.equal(reference$header.info$incrementX,target$header.info$incrementX))){
+      
+      if(reference$header.info$incrementX > target$header.info$incrementX){
+        
+        target <- x3ptools::x3p_interpolate(target,resx = reference$header.info$incrementX)
+        
+      }
+      else{
+        
+        reference <- x3ptools::x3p_interpolate(reference,resx = target$header.info$incrementX)
+        
+      }
+    }
+    
     show_modal_progress_line(text = paste0("Comparing reference vs. target scans at rotation ",thetas[1],"°"),value = 0)
     
     comparisonData_refToTarget <- 
@@ -2124,6 +2140,20 @@ server = function(input, output, session) {
       pull(x3p_processed) %>%
       .[[1]]
     
+    if(!isTRUE(all.equal(reference$header.info$incrementX,target$header.info$incrementX))){
+      
+      if(reference$header.info$incrementX > target$header.info$incrementX){
+        
+        target <- x3ptools::x3p_interpolate(target,resx = reference$header.info$incrementX)
+        
+      }
+      else{
+        
+        reference <- x3ptools::x3p_interpolate(reference,resx = target$header.info$incrementX)
+        
+      }
+    }
+    
     cellGrid <- input$numCells %>%
       stringr::str_split(",") %>%
       .[[1]] %>%
@@ -2531,7 +2561,7 @@ server = function(input, output, session) {
     req(shiny.r$data)
     req(input$customCellSelection != "")
     
-    validate(need(input$referenceSelect,"Select a reference scan!"),
+    validate(need(input$customCellSelection,"Select a reference scan!"),
              need(input$thetaRangeMin <= input$thetaRangeMax,"Enter a minimum rotation value that is less than the maximum rotation value."))
     
     tmp <- isolate(shiny.r$data)
@@ -2595,7 +2625,7 @@ server = function(input, output, session) {
       req(input$customCellBrush)
       req(input$customCellType == "Hand-drawn")
       
-      validate(need(input$referenceSelect,"Select a reference scan!"))
+      validate(need(input$customCellSelection,"Select a reference scan!"))
       
       customCellPlt_zoom <- customCellPlt +
         coord_fixed(xlim = c(unique(input$customCellBrush$xmin),unique(input$customCellBrush$xmax)),
@@ -2710,6 +2740,20 @@ server = function(input, output, session) {
       filter(x3pNames == input$targetSelect_customCell) %>%
       pull(x3p_processed) %>%
       .[[1]]
+    
+    if(!isTRUE(all.equal(refCell$header.info$incrementX,target$header.info$incrementX))){
+      
+      if(refCell$header.info$incrementX > target$header.info$incrementX){
+        
+        target <- x3ptools::x3p_interpolate(target,resx = refCell$header.info$incrementX)
+        
+      }
+      else{
+        
+        refCell <- x3ptools::x3p_interpolate(refCell,resx = target$header.info$incrementX)
+        
+      }
+    }
     
     thetas <- seq(from = input$thetaRangeMin_customCell,
                   to = input$thetaRangeMax_customCell,

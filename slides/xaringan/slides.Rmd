@@ -180,6 +180,20 @@ knitr::include_graphics("images/workflowDiagram.png")
 - [csafe.shinyapps.io/cartridgeInvestigatR/](https://csafe.shinyapps.io/cartridgeInvestigatR/)
 
 ---
+
+## Your turn
+
+Use the "Import" tab to upload the scans in the `data/knownMatch` folder.
+This folder contains two known-match scans.
+Use the app to compare the two scans.
+
+- How do the similarity scores compare to your assessment of the similarity of the cartridge cases?
+
+- Try changing the parameters in the "Comparison Parameters" and/or "Congruent Matching Cells" tabs. How do changing parameters affect the final similarity score?
+
+**Challenge**: Use the "Import" tab to upload the scans in the `data/questioned` folder. The first two scans, `x3p1` and `x3p2`, are known matches. Does the third scan, `x3p3`, match the other two? Use the app to inform your decision.
+
+---
 class: primary-blue
 # References
 
@@ -187,3 +201,4 @@ Zheng, X., Soons, J., Thompson, R., Singh, S., & Constantin, C. (2020). NIST Bal
 
 J. Song. Proposed “NIST Ballistics Identification System (NBIS)” Based on 3D Topography Measurements on Correlation Cells. American Firearm and Tool Mark Examiners Journal, 45(2):11, 2013. URL [https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=910868](https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=910868).
 
+Zemmels, J., VanderPlas, S., Hofmann, H. (2022) *A Study in Reproducibility: The Congruent Matching Cells Algorithm and cmcR package*. [https://github.com/jzemmels/cmcRWriteup](https://github.com/jzemmels/cmcRWriteup)
