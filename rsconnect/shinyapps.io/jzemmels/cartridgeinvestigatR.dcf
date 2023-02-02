@@ -5,10 +5,10 @@ account: jzemmels
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3745826
-bundleId: 6143421
+bundleId: 6787588
 url: https://jzemmels.shinyapps.io/cartridgeinvestigatR/
-when: 1659041055.97409
-lastSyncTime: 1659041055.97409
+when: 1675039643.10142
+lastSyncTime: 1675039643.10143
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: www/anim.gif
+ignoredFiles: .RData|www/anim.gif|demo|slides
