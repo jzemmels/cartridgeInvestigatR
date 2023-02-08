@@ -2,29 +2,30 @@ observeEvent(input$automaticPreprocessHelp,
              {
                
                showModal(modalDialog(
-                 title = "Help: Automatic Pre-process Tab",easyClose = TRUE,
-                 strong("Why would I use this tab?"),
+                 title = h3("Help: Automatic Pre-process Tab"),
+                 easyClose = TRUE,
+                 h4(strong("Why would I use this tab?")),
                  "Automatically preprocess cartridge case scans using a sequence of algorithms.",
                  br(),
                  br(),
-                 strong("What do I need to do before using this tab?"),
+                 h4(strong("What do I need to do before using this tab?")),
                  "Upload scans in the Import tab.",
                  br(),
                  br(),
-                 strong("How do I use this tab?"),
-                 "Click the 'Add another preprocessing step' button to add a preprocessing step to the sequence.",
-                 "Select a preprocessing step from the 'Select Preprocessing Step' dropdown.",
+                 h4(strong("How do I use this tab?")),
+                 HTML(paste0("Click the ",strong('Add Another Pre-processing Step')," button to add a preprocessing step to the sequence.")),
+                 "Select a preprocessing step from the 'Select Pre-processing Step' dropdown.",
                  "Choose parameters associated with the preprocessing step.",
                  br(),
                  br(),
-                 "Add as many preprocessing steps as you'd like by clicking 'Add another preprocessing step.'",
-                 "Once you're happy with the preprocessing procedure, click the 'Perform Automatic Pre-processing' button.",
-                 "You may reset the sequence of steps by clicking 'Reset.'",
+                 HTML(paste0("Add as many preprocessing steps as you'd like by clicking ",strong('Add Another Pre-processing Step'),".")),
+                 HTML(paste0("Once you're happy with the preprocessing procedure, click the ",strong('Perform Automatic Pre-processing')," button.")),
+                 HTML(paste0("You may reset the sequence of steps by clicking ",strong('Reset All Pre-processing Steps'),".")),
                  br(),
                  br(),
-                 strong("What is next?"),
-                 "If there are regions of a scan that you would like to manually remove, move onto the 'Manual Deletion' tab.",
-                 "Otherwise, if you are happy with the preprocessed scans, then continue onto the Comparing stage.",
+                 h4(strong("What is next?")),
+                 HTML(paste0("If there are regions of a scan that you would like to manually remove, move onto the ",strong('Needs Manual Pre-processing')," button.")),
+                 HTML(paste0("Otherwise, if you are happy with the preprocessed scans, then press the ",strong('I would like to compare these scans')," button to move to the next stages.")),
                ))
                
              })
@@ -70,7 +71,7 @@ observeEvent(input$insertBtn, {
     selector = '#placeholder',
     ui = div(
       id = Id()('div',ctn()),
-      fluidRow(column(4,selectInput(Id()('letter',ctn()), 'Select Preprocessing Step', c("Downsample","Crop","Level","Erode","Filter","Delete"),selected = NULL,multiple = FALSE)),
+      fluidRow(column(4,selectInput(Id()('letter',ctn()), 'Select Pre-processing Step', c("Downsample","Crop","Level","Erode","Filter","Delete"),selected = NULL,multiple = FALSE)),
                column(8,uiOutput(Id()('input',ctn()))))
     )
   )
@@ -172,6 +173,8 @@ observeEvent(input$preProcessExecute,{
                                     }) %>%
     purrr::discard(~ all(is.null(.)))
   
+  # shiny.r$preProcessFunctions <<- preProcessFunctions
+  
   req(nrow(shiny.r$data) > 0)
   
   tmp <- isolate(shiny.r$data)
@@ -217,13 +220,13 @@ observeEvent(input$preProcessExecute,{
         h4("Choose one of the following"),
         br(),
         actionButton(inputId = "automaticPreprocess_goToManualPreprocess",
-                     label = "Needs Manual Preprocessing",
+                     label = "Needs Manual Pre-processing",
                      width = 300,
                      icon = fontawesome::fa_i("hand-scissors")),
         br(),
         br(),
         actionButton(inputId = "automaticPreprocess_goToComparison",
-                     label = "I would like to compare these scans.",
+                     label = "I would like to compare these scans",
                      width = 300,
                      style="color: #fff; background-color: #95bb72; border-color: #4b6043",
                      icon = icon("pencil-ruler"))

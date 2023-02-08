@@ -5,26 +5,27 @@ observeEvent(input$comparisonParametersHelp,
              {
                
                showModal(modalDialog(
-                 title = "Help: Comparison Settings Tab",easyClose = TRUE,
-                 strong("Why would I use this tab?"),
+                 title = h3("Help: Cell Grid Comparison Tab"),
+                 easyClose = TRUE,
+                 h4(strong("Why would I use this tab?")),
                  "Compare two processed cartridge cases.",
+                 "This tab is primarily useful for doing a exploring specific regions of a cartridge case or investigating the behavior of the cell-based comparison procedure.",
+                 "Move to the Score stage if you are primarily interested in computing similarity scores for two cartridge cases.",
                  br(),
                  br(),
-                 strong("What do I need to do before using this tab?"),
-                 "Preprocess uploaded scans in the Preprocessing stage or click the 'Skip Automatic Pre-processing' button in the 'Import' tab.",
+                 h4(strong("What do I need to do before using this tab?")),
+                 "Complete the Import + Pre-processing stage.",
                  br(),
                  br(),
-                 strong("How do I use this tab?"),
+                 h4(strong("How do I use this tab?")),
                  "Select a reference scan to be divided into a grid of cells.",
                  "Select a target scan to which each reference cell will be compared.",
-                 "Set various parameters for the cell-based comparison procedure.",
-                 "Once you are happy with the comparison procedure parameters, click the 'Perform Comparison' button.",
+                 HTML(paste0("Click the ",strong("Settings")," button to set various parameters for the cell-based comparison procedure.")),
+                 HTML(paste0("Click the ",strong('Perform Comparison')," button when you are happy with the comparison procedure parameters.")),
                  br(),
                  br(),
-                 strong("What is next?"),
-                 "Move on to the ",
-                 # 'Results Summary' tab to explore the distribution of the similarity features or the 
-                 "'Individual Cell Results' tab to study the registration of specific cells."
+                 h4(strong("What is next?")),
+                 "Move to the Results Summary or Individual Cell Results to explore results from the comparison procedure."
                ))
                
              })
@@ -491,8 +492,6 @@ observeEvent(input$comparisonButton,{
     update_modal_progress(value = 1,
                           text = paste0("Comparing target vs. reference scans at rotation ",thetas[[length(thetas)]],"°"))
     
-    remove_modal_progress()
-    
     shiny.r$comparisonData_targetToRef <<- comparisonData_targetToRef
     
     shiny.r$acesFeatures <<- bind_rows(comparisonData_refToTarget  %>%
@@ -524,6 +523,8 @@ observeEvent(input$comparisonButton,{
                       choices = c("",input$referenceSelect,input$targetSelect))
     
   }
+  
+  remove_modal_progress()
   
 })
 

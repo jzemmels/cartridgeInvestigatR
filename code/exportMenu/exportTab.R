@@ -34,7 +34,9 @@ output$export_checkboxUI <- renderUI({
     checkboxGroupInput(inputId = "preprocessExport",
                        label = "Import + Pre-process Tab",
                        choices = c("Original Scans (.x3p)",
-                                   "Pre-processed Scans (.x3p)")),
+                                   "Pre-processed Scans (.x3p)"),
+                       selected = c("Original Scans (.x3p)",
+                                    "Pre-processed Scans (.x3p)")),
     uiOutput(outputId = "compareExport_ui"),
     uiOutput(outputId = "scoreExport_ui"),
     checkboxInput(inputId = "scriptExport",label = "Reproducible R script (.R)",value = TRUE),
@@ -197,6 +199,22 @@ output$exportButton <- downloadHandler(
     
     shinybusy::show_modal_progress_line(value = 0,text = "Saving files")
     
+    if(!is.null(input$scriptExport)){
+      
+      shinybusy::update_modal_progress(text = paste0("Saving reproducible script as .R file."),
+                                       value = progressBarSegments[1])
+      progressBarSegments <- progressBarSegments[-1]
+      
+      file.create(paste0(filePath,"/reproducibleScript.R"))
+      
+      reproScript <- readLines(paste0(filePath,"/reproducibleScript.R"))
+      reproScript <- paste0(reproScript,
+                            "#Set working directory\nthis.dir <- dirname(parent.frame(2)$ofile)\nsetwd(this.dir)\n
+                            #Necessary libraries\nlibrary(cmcR)\nlibrary(scored)\nlibrary(impressions)\nlibrary(tidyverse)\n")
+      write(reproScript,file = paste0(filePath,"/reproducibleScript.R"))
+      
+    }
+    
     if(!is.null(input$preprocessExport)){
       
       tmp <- isolate(shiny.r$data)
@@ -227,6 +245,153 @@ output$exportButton <- downloadHandler(
             x3ptools::x3p_write(..2,file = paste0(filePath,"/",..1,"_processed.x3p"))
             
           })
+        
+        # write pre-processing pipeline to script
+        if(!is.null(input$scriptExport)){
+          
+          reproScript <- paste0(readLines(paste0(filePath,"/reproducibleScript.R")),collapse = "\n")
+          
+          reproScript <- paste0(reproScript,
+                                "#Pre-processing pipeline code:")
+          
+          preProcessHelpers <- paste0(readLines("code/preProcessFunction_helpers.R"),collapse = "\n")
+          
+          reproScript <- paste0(reproScript,
+                                "\n##Pre-processing helper functions\n",
+                                preProcessHelpers,
+                                collapse = "\n")
+          
+          originalScans <- list.files(paste0(filePath,"/"),pattern = "_original\\.x3p")
+          
+          tmpInput <- shiny::reactiveValuesToList(input)
+          
+          # each preprocessing step is in-order as specified by letter# where # is
+          # a number
+          preProcessSteps <- tmpInput[stringr::str_detect(names(tmpInput),"letter")]
+          
+          if(length(preProcessSteps) > 0){
+            
+            preProcessingPipelineCode  <- 
+              paste0('# the steps may be out of order depending on which was last updated by
+                   # the user. this will correct the order
+                   tmpInput <- ',paste0(deparse(dput(tmpInput[str_detect(names(tmpInput),"params")])),collapse = ""),'
+                   preProcessSteps <- ',paste0(deparse(dput(preProcessSteps)),collapse=""),'
+                   preProcessSteps <- preProcessSteps[order(names(preProcessSteps))]
+                   preProcessFunctions <- purrr::map(1:length(preProcessSteps),
+                                              function(ind){
+                                                
+                                                if(!is.null(preProcessSteps[[ind]])){
+                                                  
+                                                  # get the parameters
+                                                  paramValues <- tmpInput[names(tmpInput) %in% paste0("params",c(1,2),"_",ind)]
+                                                  
+                                                  
+                                                  # returns a preprocessing function with the necessary parameters
+                                                  # filled-in
+                                                  return(preProcess_partial(preProcessSteps[[ind]],paramValues))
+                                                  
+                                                }
+                                              }) %>%
+              purrr::discard(~ all(is.null(.)))
+            
+            purrr::walk(',paste0(deparse(dput(originalScans)),collapse=""),',
+                       function(filePath){
+                         
+                         scan <- x3ptools::x3p_read(filePath)
+                         
+                         scanName <- filePath %>%
+                           stringr::str_remove(paste0(filePath,"/")) %>%
+                           stringr::str_remove("_original\\\\.x3p")
+                         
+                         purrr::walk(preProcessFunctions,
+                                     function(func){
+                                       
+                                       scan <<- func(x3p = scan)
+                                       
+                                     })
+                        
+                        # copy the mask from the processed scan, if applicable
+                        if(file.exists(paste0(scanName,"_processed.x3p"))){
+                          manualMask <- x3ptools::x3p_read(paste0(scanName,"_processed.x3p"))$mask
+                          if(!is.null(manualMask)){
+                            scan$mask <- t(manualMask)
+                            maskValues <- unique(c(scan$mask))
+                               
+                            # some mask values have an extra "FF" at the end
+                            # that is not part of the hexidecimal color ID
+                            for(color in maskValues){
+                              scan$mask[scan$mask == color] <- str_sub(color,1,7) 
+              
+                            }
+                            maskCounts <- table(c(scan$mask))
+            
+                            if(length(maskCounts) > 1){
+                              # assume that the most common color in the mask
+                              # is the one to keep
+                              maskColorKeep <- names(maskCounts)[which.max(maskCounts)]
+            
+                              # replace non-mask values with NA
+                              scan$surface.matrix[t(as.matrix(scan$mask)) != maskColorKeep] <- NA
+                            }
+                          }
+                        }
+                        
+                        x3ptools::x3p_write(scan,file = paste0(scanName,"_processed.x3p"))
+                       })
+            ',collapse = "")
+            
+          } else{
+            
+            preProcessingPipelineCode  <- 
+              paste0('
+                     purrr::walk(',paste0(deparse(dput(originalScans)),collapse=""),',
+                       function(filePath){
+                         
+                         scan <- x3ptools::x3p_read(filePath)
+                         
+                         scanName <- filePath %>%
+                           stringr::str_remove(paste0(filePath,"/")) %>%
+                           stringr::str_remove("_original\\\\.x3p")
+                        
+                        # copy the mask from the processed scan, if applicable
+                        if(file.exists(paste0(scanName,"_processed.x3p"))){
+                          manualMask <- x3ptools::x3p_read(paste0(scanName,"_processed.x3p"))$mask
+                          if(!is.null(manualMask)){
+                            scan$mask <- t(manualMask)
+                            maskValues <- unique(c(scan$mask))
+                               
+                            # some mask values have an extra "FF" at the end
+                            # that is not part of the hexidecimal color ID
+                            for(color in maskValues){
+                              scan$mask[scan$mask == color] <- str_sub(color,1,7) 
+              
+                            }
+                            maskCounts <- table(c(scan$mask))
+            
+                            if(length(maskCounts) > 1){
+                              # assume that the most common color in the mask
+                              # is the one to keep
+                              maskColorKeep <- names(maskCounts)[which.max(maskCounts)]
+            
+                              # replace non-mask values with NA
+                              scan$surface.matrix[t(as.matrix(scan$mask)) != maskColorKeep] <- NA
+                            }
+                          }
+                        }
+                        
+                        x3ptools::x3p_write(scan,file = paste0(scanName,"_processed.x3p"))
+                       })
+            ',collapse = "")
+            
+          }
+          
+          reproScript <- paste0(reproScript,
+                                "\n##Pre-processing pipeline code\n",
+                                preProcessingPipelineCode,collapse = "\n")
+          
+          write(reproScript,file = paste0(filePath,"/reproducibleScript.R"))
+          
+        }
         
       }
       
@@ -264,6 +429,57 @@ output$exportButton <- downloadHandler(
         }
         else{
           save(exploreComparisonResults,file = paste0(filePath,"/exploreComparisonResults.RData"))
+        }
+        
+        # write pre-processing pipeline to script
+        if(!is.null(input$scriptExport)){
+          
+          reproScript <- paste0(readLines(paste0(filePath,"/reproducibleScript.R")),collapse = "\n")
+          
+          # reproScript <- paste0(reproScript,
+          #                       "\n#Cell Grid Comparison code:\n")
+          
+          comparisonCode <- 
+            paste0('
+                   reference <- x3ptools::x3p_read("',input$referenceSelect,'_processed.x3p")
+                   target <- x3ptools::x3p_read("',input$targetSelect,'_processed.x3p")
+                   
+                   # rarely, the resolution of two scans are barely different from one another
+                   # (on the order of 1e-10). This forces the resolutions to be the same
+                   if(!isTRUE(all.equal(reference$header.info$incrementX,target$header.info$incrementX))){
+                     if(reference$header.info$incrementX > target$header.info$incrementX){
+                       target <- x3ptools::x3p_interpolate(target,resx = reference$header.info$incrementX)
+                     }
+                     else{
+                       reference <- x3ptools::x3p_interpolate(reference,resx = target$header.info$incrementX)
+                     }
+                   }
+                   
+                   exploreComparisonResults <- 
+                     scored::comparison_cellBased(reference = reference,
+                                                  target = target,
+                                                  direction = "both",
+                                                  returnX3Ps = TRUE, 
+                                                  thetas = seq(',input$thetaRangeMin,',',input$thetaRangeMax,",by = ",input$thetaStep,'),
+                                                  numCells = ',deparse(dput(str_split(input$numCells,",")[[1]] %>% map_dbl(as.numeric))),',
+                                                  maxMissingProp = ',input$maxNonMissingProp,',
+                                                  sideLengthMultiplier = ',input$cellRegionProp,')
+                   
+                   if("',input$exportFileType,'" == ".csv"){
+                     readr::write_csv(exploreComparisonResults %>%
+                             dplyr::select(-c(cellHeightValues,alignedTargetCell)),
+                           file = "exploreComparisonResults.csv")
+                   } else{
+                     save(exploreComparisonResults,file = "exploreComparisonResults.RData")
+                   }',
+                   collapse = "")
+          
+          reproScript <- paste0(reproScript,
+                                "\n##Cell Grid Comparison code\n",
+                                comparisonCode,collapse = "\n")
+          
+          write(reproScript,file = paste0(filePath,"/reproducibleScript.R"))
+          
         }
         
       }
@@ -328,6 +544,122 @@ output$exportButton <- downloadHandler(
         }
         
       }
+      if(("ACES Features" %in% input$scoreExport) | ("All ACES Results (large if export as .RData)" %in% input$scoreExport)){
+        # write pre-processing pipeline to script
+        if(!is.null(input$scriptExport)){
+          
+          reproScript <- paste0(readLines(paste0(filePath,"/reproducibleScript.R")),collapse = "\n")
+          
+          # reproScript <- paste0(reproScript,
+          #                       "\n#Cell Grid Comparison code:\n")
+          
+          acesCode <- 
+            paste0('
+                   reference <- x3ptools::x3p_read("',input$score_referenceSelect,'_processed.x3p")
+                   target <- x3ptools::x3p_read("',input$score_targetSelect,'_processed.x3p")
+                   
+                   # rarely, the resolution of two scans are barely different from one another
+                   # (on the order of 1e-10). This forces the resolutions to be the same
+                   if(!isTRUE(all.equal(reference$header.info$incrementX,target$header.info$incrementX))){
+                     if(reference$header.info$incrementX > target$header.info$incrementX){
+                       target <- x3ptools::x3p_interpolate(target,resx = reference$header.info$incrementX)
+                     }
+                     else{
+                       reference <- x3ptools::x3p_interpolate(reference,resx = target$header.info$incrementX)
+                     }
+                   }
+                   
+                   compName <- paste0("',input$score_referenceSelect,'","_vs_","',input$score_targetSelect,'")
+                   
+                   # first align full reference and target across theta grid
+                   fullScanRegistrations <- scored::comparison_fullScan(reference = reference,target = target,
+                                                       thetas = seq(-30,30,by = 3),returnX3Ps = FALSE) %>%
+                       dplyr::mutate(comparisonName = compName) %>%
+                       dplyr::group_by(direction,cellIndex) %>%
+                       dplyr::filter(fft_ccf == max(fft_ccf)) %>%
+                       dplyr::slice(1) %>%
+                       dplyr::ungroup()  %>%
+                       dplyr::arrange(direction) %>%
+                       dplyr::group_by(direction) %>%
+                       dplyr::group_split() %>%
+                       purrr::map_dfr(function(dat){
+                           scored::comparison_fullScan(reference = reference,
+                                                       target = target,
+                                                       thetas = unique(dat$theta),
+                                                       returnX3Ps = TRUE) %>%
+                       dplyr::filter(fft_ccf == max(fft_ccf)) %>%
+                       dplyr::mutate(comparisonName = compName,
+                                     direction = unique(dat$direction))
+                       })
+  
+                  fullScanFeatures <- fullScanRegistrations %>%
+                      dplyr::group_by(comparisonName,direction) %>%
+                      scored::feature_aLaCarte(features = c("registration","visual")) %>%
+                      dplyr::group_by(comparisonName) %>%
+                      dplyr::summarize(across(tidyselect::where(is.numeric),~ mean(.,na.rm = TRUE))) %>%
+                      purrr::set_names(paste0("fullScan_",names(.))) %>%
+                      dplyr::rename(comparisonName = fullScan_comparisonName)
+                  
+                  cellBasedRegistrations <- fullScanRegistrations %>%
+                      dplyr::select(direction,theta,cellHeightValues,alignedTargetCell) %>%
+                      dplyr::group_by(direction) %>%
+                      dplyr::group_split() %>%
+                      purrr::map_dfr(function(dat){
+                          scored::comparison_cellBased(reference = dat$cellHeightValues[[1]],
+                                                       target = dat$alignedTargetCell[[1]],
+                                                       direction = "one",
+                                                       thetas = -2:2,
+                                                       maxMissingProp = .99,
+                                                       numCells = c(4,4),
+                                                       sideLengthMultiplier = 1.1,
+                                                       returnX3Ps = TRUE) %>%
+                      mutate(comparisonName = compName,
+                             direction = unique(dat$direction))
+                      })
+                  
+                  cellBasedFeatures <- cellBasedRegistrations %>%
+                      dplyr::group_by(comparisonName,direction) %>%
+                      scored::feature_aLaCarte(features = "all",quiet = TRUE,eps = 5,minPts = 4) %>%
+                      dplyr::group_by(comparisonName) %>%
+                      dplyr::mutate(clusterInd = as.numeric(clusterInd)) %>%
+                      dplyr::summarize(across(tidyselect::where(~ any(is.numeric(.) | is.na(.))),~ mean(.,na.rm = TRUE))) %>%
+                      dplyr::ungroup() %>%
+                      purrr::set_names(paste0("cellBased_",names(.))) %>%
+                      dplyr::select(-cellBased_comparisonName)
+                  
+                  acesResults_all <- dplyr::bind_rows(fullScanRegistrations %>%
+                                            dplyr::mutate(comparisonType = "Full-Scan"),
+                                          cellBasedRegistrations %>%
+                                            dplyr::mutate(comparisonType = "Cell-Based"))
+                  
+                  if("',input$exportFileType,'" == ".csv"){
+                      readr::write_csv(acesResults_all %>%
+                             dplyr::select(-c(cellHeightValues,alignedTargetCell)),
+                           file = "acesResults_all.csv")
+                  } else{
+                    save(acesResults_all,file = "acesResults_all.RData")
+                  }
+                  
+                  acesFeatures <- bind_cols(fullScanFeatures,cellBasedFeatures) %>%
+                      dplyr::mutate(comparisonName = compName)
+                  
+                  if("',input$exportFileType,'" == ".csv"){
+                      readr::write_csv(acesFeatures,
+                           file = "acesFeatures.csv")
+                  } else{ 
+                    save(acesFeatures,file = "acesFeatures.RData")
+                  }',
+                  collapse = "")
+          
+          reproScript <- paste0(reproScript,
+                                "\n##ACES Features code\n",
+                                acesCode,collapse = "\n")
+          
+          write(reproScript,file = paste0(filePath,"/reproducibleScript.R"))
+          
+        }
+      }
+      
       if("All CMC Results (large if export as .RData)" %in% input$scoreExport){
         
         shinybusy::update_modal_progress(text = paste0("Saving all CMC results as ",input$exportFileType," file."),
@@ -363,8 +695,7 @@ output$exportButton <- downloadHandler(
             dplyr::mutate(cmcType = "originalMethod",
                           direction = "reference_vs_target"),
           cmcCounts[[2]] %>% 
-            dplyr::mutate(cmcType = "highCMC",direction = "symmetric"),
-        )%>%
+            dplyr::mutate(cmcType = "highCMC",direction = "symmetric"))%>%
           mutate(comparisonName = paste0(input$score_referenceSelect,"_vs_",input$score_targetSelect)) 
         
         if(input$exportFileType == ".csv"){
@@ -377,14 +708,99 @@ output$exportButton <- downloadHandler(
         
       }
       
-    }
-    if(!is.null(input$scriptExport)){
-      
-      shinybusy::update_modal_progress(text = paste0("Saving reproducible script as .R file."),
-                                       value = progressBarSegments[1])
-      progressBarSegments <- progressBarSegments[-1]
-      
-      file.create(paste0(filePath,"/reproducibleScript.R"))
+      if(("CMC Counts" %in% input$scoreExport) | ("All CMC Results (large if export as .RData)" %in% input$scoreExport)){
+        # write pre-processing pipeline to script
+        if(!is.null(input$scriptExport)){
+          
+          reproScript <- paste0(readLines(paste0(filePath,"/reproducibleScript.R")),collapse = "\n")
+          
+          # reproScript <- paste0(reproScript,
+          #                       "\n#Cell Grid Comparison code:\n")
+          
+          cmcCode <- 
+            paste0('
+                   reference <- x3ptools::x3p_read("',input$score_referenceSelect,'_processed.x3p")
+                   target <- x3ptools::x3p_read("',input$score_targetSelect,'_processed.x3p")
+                   
+                   # rarely, the resolution of two scans are barely different from one another
+                   # (on the order of 1e-10). This forces the resolutions to be the same
+                   if(!isTRUE(all.equal(reference$header.info$incrementX,target$header.info$incrementX))){
+                     if(reference$header.info$incrementX > target$header.info$incrementX){
+                       target <- x3ptools::x3p_interpolate(target,resx = reference$header.info$incrementX)
+                     }
+                     else{
+                       reference <- x3ptools::x3p_interpolate(reference,resx = target$header.info$incrementX)
+                     }
+                   }
+                   
+                   compName <- paste0("',input$score_referenceSelect,'","_vs_","',input$score_targetSelect,'")
+                   
+                   compData <- scored::comparison_cellBased(reference = reference,
+                                           target = target,
+                                           direction = "both",
+                                           thetas = seq(',input$cmcTab_thetaRangeMin,',',input$cmcTab_thetaRangeMax,",by = ",input$cmcTab_thetaStep,'),
+                                           numCells = ',deparse(dput(str_split(input$cmcTab_numCells,",")[[1]] %>% map_dbl(as.numeric))),',
+                                           maxMissingProp = ',input$cmcTab_maxNonMissingProp,',
+                                           sideLengthMultiplier = ',input$cmcTab_cellRegionProp,',
+                                           returnX3Ps = TRUE)
+                   
+                   cmc1 <- compData %>%
+                       dplyr::filter(direction == "reference_vs_target") %>%
+                       dplyr::mutate(originalMethodClassif = cmcR::decision_CMC(cellIndex=cellIndex,
+                                                             x=x,y=y,theta = theta,corr = pairwiseCompCor,
+                                                             xThresh = 20,thetaThresh = 6,corrThresh = .5),
+                                     highCMCClassif = cmcR::decision_CMC(cellIndex=cellIndex,
+                                                      x=x,y=y,theta = theta,corr = pairwiseCompCor,
+                                                      xThresh = 20,thetaThresh = 6,corrThresh = .5,tau = 1))
+                   cmc2 <- compData %>%
+                       dplyr::filter(direction == "target_vs_reference") %>%
+                       dplyr::mutate(originalMethodClassif = cmcR::decision_CMC(cellIndex=cellIndex,
+                                                             x=x,y=y,theta = theta,corr = pairwiseCompCor,
+                                                             xThresh = 20,thetaThresh = 6,corrThresh = .5),
+                                     highCMCClassif = cmcR::decision_CMC(cellIndex=cellIndex,
+                                                      x=x,y=y,theta = theta,corr = pairwiseCompCor,
+                                                      xThresh = 20,thetaThresh = 6,corrThresh = .5,tau = 1))
+                   
+                   cmcCounts <- cmcR::decision_combineDirections(cmc1 %>%
+                                                    dplyr::select(-c(cellHeightValues,alignedTargetCell))
+                                                  ,cmc2 %>%
+                                                    dplyr::select(-c(cellHeightValues,alignedTargetCell)))
+                   
+                   cmcCounts <- bind_rows(
+                       cmcCounts[[1]][[1]] %>%
+                         dplyr::mutate(cmcType = "originalMethod",direction = "reference_vs_target"),
+                       cmcCounts[[1]][[2]] %>%
+                         dplyr::mutate(cmcType = "originalMethod",direction = "reference_vs_target"),
+                       cmcCounts[[2]] %>%
+                         dplyr::mutate(cmcType = "highCMC",direction = "symmetric")) %>%
+                    dplyr::mutate(comparisonName = compName)
+          
+                   if("',input$exportFileType,'" == ".csv"){
+                      readr::write_csv(cmcCounts,file = "cmcCounts.csv")
+                   } else{
+                       save(cmcCounts,file = "cmcCounts.RData")
+                   }
+                   
+                   cmcResults_all <- bind_rows(cmc1,cmc2)
+                   
+                   if("',input$exportFileType,'" == ".csv"){
+                       readr::write_csv(cmcResults_all %>%
+                                         dplyr::select(-c(cellHeightValues,alignedTargetCell)),
+                                        file = "cmcResults_all.csv")
+                   } else{ 
+                   save(cmcResults_all,file = "cmcResults_all.RData")
+                   }
+                   ',
+                   collapse = "")
+          
+          reproScript <- paste0(reproScript,
+                                "\n##CMC Method code\n",
+                                cmcCode,collapse = "\n")
+          
+          write(reproScript,file = paste0(filePath,"/reproducibleScript.R"))
+          
+        }
+      }
       
     }
     

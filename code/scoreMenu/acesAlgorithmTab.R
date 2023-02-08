@@ -139,6 +139,7 @@ observeEvent(input$acesCalculate,{
                                   target = target,
                                   thetas = unique(dat$theta),
                                   returnX3Ps = TRUE) %>%
+        dplyr::filter(fft_ccf == max(fft_ccf)) %>%
         dplyr::mutate(comparisonName = compName,
                       direction = unique(dat$direction))
       
@@ -165,13 +166,14 @@ observeEvent(input$acesCalculate,{
       
       scored::comparison_cellBased(reference = dat$cellHeightValues[[1]],
                                    target = dat$alignedTargetCell[[1]],
-                                   direction = "both",
+                                   direction = "one",
                                    thetas = -2:2,
                                    maxMissingProp = .99,
                                    numCells = c(4,4),
                                    sideLengthMultiplier = 1.1,
                                    returnX3Ps = TRUE) %>%
-        mutate(comparisonName = compName)
+        mutate(comparisonName = compName,
+               direction = unique(dat$direction))
       
     })
   
@@ -259,6 +261,71 @@ observeEvent(input$acesCalculate,{
     
   })
   
+  output$aces_trainingFeatureDistribution <- renderPlot({
+    
+    # browser()
+    
+    aces_trainingData %>%
+      dplyr::select(.outcome,everything()) %>%
+      tidyr::pivot_longer(cols = !contains(".outcome")) %>%
+      mutate(value = ifelse(name == "cellBased_filteredRatio_ave",value <= 15,
+                            ifelse(name == "cellBased_filteredRatio_sd",value <= 15,
+                                   ifelse(name == "cellBased_translationDiff",value <= 20,
+                                          ifelse(name == "fullScan_neighborhoodSizeAve_ave",value <= 250,
+                                                 value)))),
+             name = case_when(name == "cellBased_clusterIndTRUE" ~ "Cluster Indicator",
+                              name == "cellBased_clusterSize" ~ "Cluster Size",
+                              name == "cellBased_differenceCor_ave" ~ "Cell-Based Mean Differences Correlation",
+                              name == "cellBased_filteredRatio_ave" ~ "Cell-Based Mean Similarities vs. Differences Ratio",
+                              name == "cellBased_filteredRatio_sd" ~ "Cell-Based Similarities vs. Differences Ratio SD",
+                              name == "cellBased_neighborhoodSizeAve_ave" ~ "Cell-Based Average Labeled Neighborhood Size",
+                              name == "cellBased_neighborhoodSizeSD_ave" ~ "Cell-Based Labeled Neighborhood Size SD",
+                              name == "cellBased_pairwiseCompCorMean" ~ "Cell-Based Pairwise Complete Correlation Mean",
+                              name == "cellBased_pairwiseCompCorSD" ~ "Cell-Based Pairwise Complete Correlation SD",
+                              name == "cellBased_thetaDiff" ~ "Estimated Rotation Difference",
+                              name == "cellBased_thetaRotSD" ~ "Cell-Based Rotation SD",
+                              name == "cellBased_translationDiff" ~ "Estimated Translation Difference",
+                              name == "cellBased_xTransSD" ~ "Cell-Based Vertical Translation SD",
+                              name == "cellBased_yTransSD" ~ "Cell-Based Horizontal Translation SD",
+                              name == "fullScan_differenceCor_ave" ~ "Full-Scan Differences Correlation",
+                              name == "fullScan_filteredRatio_ave" ~ "Full-Scan Similarities vs. Differences Ratio",
+                              name == "fullScan_neighborhoodSizeAve_ave" ~ "Full-Scan Average Labeled Neighborhood Size",
+                              name == "fullScan_neighborhoodSizeSD_ave" ~ "Full-Scan Labeled Neighborhood Size SD",
+                              name == "fullScan_pairwiseCompCorMean" ~ "Full-Scan Pairwise Complete Correlation",
+                              TRUE ~ "")) %>%
+      ggplot() +
+      geom_density(aes(x = value,fill = .outcome),alpha = .5) +
+      facet_wrap(~ name,scales = "free",labeller = label_wrap_gen()) +
+      theme_bw() +
+      theme(legend.position = "bottom") +
+      geom_vline(data = allFeatures %>% 
+                   pivot_longer(everything()) %>% 
+                   mutate(name = case_when(name == "cellBased_clusterIndTRUE" ~ "Cluster Indicator",
+                                           name == "cellBased_clusterSize" ~ "Cluster Size",
+                                           name == "cellBased_differenceCor_ave" ~ "Cell-Based Mean Differences Correlation",
+                                           name == "cellBased_filteredRatio_ave" ~ "Cell-Based Mean Similarities vs. Differences Ratio",
+                                           name == "cellBased_filteredRatio_sd" ~ "Cell-Based Similarities vs. Differences Ratio SD",
+                                           name == "cellBased_neighborhoodSizeAve_ave" ~ "Cell-Based Average Labeled Neighborhood Size",
+                                           name == "cellBased_neighborhoodSizeSD_ave" ~ "Cell-Based Labeled Neighborhood Size SD",
+                                           name == "cellBased_pairwiseCompCorMean" ~ "Cell-Based Pairwise Complete Correlation Mean",
+                                           name == "cellBased_pairwiseCompCorSD" ~ "Cell-Based Pairwise Complete Correlation SD",
+                                           name == "cellBased_thetaDiff" ~ "Estimated Rotation Difference",
+                                           name == "cellBased_thetaRotSD" ~ "Cell-Based Rotation SD",
+                                           name == "cellBased_translationDiff" ~ "Estimated Translation Difference",
+                                           name == "cellBased_xTransSD" ~ "Cell-Based Vertical Translation SD",
+                                           name == "cellBased_yTransSD" ~ "Cell-Based Horizontal Translation SD",
+                                           name == "fullScan_differenceCor_ave" ~ "Full-Scan Differences Correlation",
+                                           name == "fullScan_filteredRatio_ave" ~ "Full-Scan Similarities vs. Differences Ratio",
+                                           name == "fullScan_neighborhoodSizeAve_ave" ~ "Full-Scan Average Labeled Neighborhood Size",
+                                           name == "fullScan_neighborhoodSizeSD_ave" ~ "Full-Scan Labeled Neighborhood Size SD",
+                                           name == "fullScan_pairwiseCompCorMean" ~ "Full-Scan Pairwise Complete Correlation",
+                                           TRUE ~ "")),
+                 aes(xintercept = value)) +
+      labs(title = "Questioned Comparison Feature Values vs. Known-Source Comparison Feature Values",
+           fill = "Ground Truth")
+    
+  })
+  
   output$aces_matchProbText <- renderText({
     
     HTML(paste0("<br/>",
@@ -270,6 +337,36 @@ observeEvent(input$acesCalculate,{
                                   
                                 }) %>%
                   paste0(collapse = "<br/>")))
+    
+  })
+  
+  output$aces_featureTable <- renderTable({
+    
+    return(allFeatures %>% 
+             tidyr::pivot_longer(everything(),
+                                 names_to = "Feature Name",
+                                 values_to = "Feature Value") %>%
+             mutate(`Feature Name` = 
+                      case_when(`Feature Name` == "cellBased_clusterIndTRUE" ~ "Cluster Indicator",
+                                `Feature Name` == "cellBased_clusterSize" ~ "Cluster Size",
+                                `Feature Name` == "cellBased_differenceCor_ave" ~ "Cell-Based Mean Differences Correlation",
+                                `Feature Name` == "cellBased_filteredRatio_ave" ~ "Cell-Based Mean Similarities vs. Differences Ratio",
+                                `Feature Name` == "cellBased_filteredRatio_sd" ~ "Cell-Based Similarities vs. Differences Ratio SD",
+                                `Feature Name` == "cellBased_neighborhoodSizeAve_ave" ~ "Cell-Based Average Labeled Neighborhood Size",
+                                `Feature Name` == "cellBased_neighborhoodSizeSD_ave" ~ "Cell-Based Labeled Neighborhood Size SD",
+                                `Feature Name` == "cellBased_pairwiseCompCorMean" ~ "Cell-Based Pairwise Complete Correlation Mean",
+                                `Feature Name` == "cellBased_pairwiseCompCorSD" ~ "Cell-Based Pairwise Complete Correlation SD",
+                                `Feature Name` == "cellBased_thetaDiff" ~ "Estimated Rotation Difference",
+                                `Feature Name` == "cellBased_thetaRotSD" ~ "Cell-Based Rotation SD",
+                                `Feature Name` == "cellBased_translationDiff" ~ "Estimated Translation Difference",
+                                `Feature Name` == "cellBased_xTransSD" ~ "Cell-Based Vertical Translation SD",
+                                `Feature Name` == "cellBased_yTransSD" ~ "Cell-Based Horizontal Translation SD",
+                                `Feature Name` == "fullScan_differenceCor_ave" ~ "Full-Scan Differences Correlation",
+                                `Feature Name` == "fullScan_filteredRatio_ave" ~ "Full-Scan Similarities vs. Differences Ratio",
+                                `Feature Name` == "fullScan_neighborhoodSizeAve_ave" ~ "Full-Scan Average Labeled Neighborhood Size",
+                                `Feature Name` == "fullScan_neighborhoodSizeSD_ave" ~ "Full-Scan Labeled Neighborhood Size SD",
+                                `Feature Name` == "fullScan_pairwiseCompCorMean" ~ "Full-Scan Pairwise Complete Correlation",
+                                TRUE ~ "")))
     
   })
   

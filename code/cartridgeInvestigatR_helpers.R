@@ -158,148 +158,6 @@ prepare_tt_Server <- function(id, data, userdir) {
     })
 }
 
-# the input server object contains preprocessing parameters followed by the
-# index specifying the order in which the functions are to be applied. this
-# function matches the preprocessing step to the parameters + index
-preProcess_params <- function(preProcStep,ind){
-  
-  if(preProcStep == "Downsample"){
-    
-    return(c(paste0("downsamp",ind)))
-    
-  }
-  if(preProcStep == "Crop"){
-    
-    return(c(paste0("cropRegion",ind),paste0("cropOffset",ind)))
-    
-  }
-  if(preProcStep == "Level"){
-    
-    return(c(paste0("level",ind)))
-    
-  }
-  if(preProcStep == "Erode"){
-    
-    return(c(paste0("erodeRegion",ind),paste0("erodeRadius",ind)))
-  
-    }
-  if(preProcStep == "Filter"){
-    
-    return(c(paste0("filterType",ind),paste0("filterParams",ind)))
-  
-    }
-  
-}
-
-# this is a helper for the preprocess procedure on the server side. this will
-# return a preprocessing function that with necessary parameters filled-in
-preProcess_partial <- function(preProcStep,paramValues){
-  
-  # browser()
-  
-  if(preProcStep == "Downsample"){
-    
-    if((paramValues[[1]] <= 0) | ((paramValues[[1]] %% 1) != 0)){
-      
-      showNotification("Enter a positive whole number for the Stride parameter of the Downsample step",type = "error")
-      validate(need(paramValues[[1]] > 0 & ((paramValues[[1]] %% 1) == 0),message = FALSE))
-      
-    }
-    
-    return(purrr::partial(x3ptools::x3p_sample,m = !!paramValues[[1]]))
-    
-  }
-  if(preProcStep == "Crop"){
-    
-    cropOffset <- paramValues[[which(str_detect(string = names(paramValues),pattern = "params2"))]]
-    
-    if(((cropOffset %% 1) != 0)){
-      
-      showNotification("Enter a positive whole number for the Stride parameter of the Downsample step",type = "error")
-      validate(need(((cropOffset %% 1) == 0),message = FALSE))
-      
-    }
-    
-    return(purrr::partial(cmcR::preProcess_crop,region = tolower(!!paramValues[[1]]),offset = !!paramValues[[2]]))
-    
-  }
-  if(preProcStep == "Level"){
-    
-    if(paramValues[[1]] == "Mean"){
-     
-      return(purrr::partial(cmcR::preProcess_removeTrend,statistic = tolower(!!paramValues[[1]])))
-       
-    }
-    else{
-      return(purrr::partial(cmcR::preProcess_removeTrend,statistic = "quantile",method = "fn",tau = .5))
-    }
-  }
-  if(preProcStep == "Erode"){
-    
-    erodeRadius <- paramValues[[which(str_detect(string = names(paramValues),pattern = "params2"))]]
-    
-    if((erodeRadius <= 0) | ((erodeRadius %% 1) != 0)){
-      
-      showNotification("Enter a positive whole number for the Radius parameter of the Erode step",type = "error")
-      validate(need(erodeRadius > 0 & ((erodeRadius %% 1) == 0),message = FALSE))
-      
-    }
-    
-    return(purrr::partial(cmcR::preProcess_erode,region = tolower(!!paramValues[[1]]),morphRadius = !!paramValues[[2]]))
-    
-  }
-  if(preProcStep == "Filter"){
-    
-    # sometimes(?) the filter type comes after the wavelength cutoffs, so we'll
-    # look for the element starting with "params2"
-    filtParams <- paramValues[[which(str_detect(string = names(paramValues),pattern = "params2"))]] %>%
-      stringr::str_split(",") %>%
-      .[[1]] %>%
-      purrr::map_dbl(as.numeric)
-    
-    if(paramValues[[1]] == "Lowpass"){
-      
-      if(length(filtParams) != 1 | any(filtParams) <= 0){
-        
-        showNotification("Enter one positive whole number for the Wavelength parameter of the Filter step",type = "error")
-        validate(need(length(filtParams) == 1 & all(filtParams) > 0,message = FALSE))
-        
-      }
-      
-      return(purrr::partial(cmcR::preProcess_gaussFilter,wavelength = !!filtParams,filtertype = "lp"))
-    
-      
-      }
-    else{
-      
-      if(length(filtParams) != 2 | any(filtParams) <= 0){
-        
-        showNotification("Enter two positive, comma-separated whole numbers for the Wavelengths parameter of the Filter step",type = "error")
-        validate(need(length(filtParams) == 2 & all(filtParams) > 0,message = FALSE))
-        
-      }
-      
-      return(purrr::partial(cmcR::preProcess_gaussFilter,wavelength = !!filtParams,filtertype = "bp"))
-      
-      }
-    
-    
-  }
-  if(preProcStep == "Delete"){
-    
-    return(purrr::partial(x3pDeleteMask,color = "#ff0000"))
-    
-  }
-  
-}
-
-x3pDeleteMask <- function(x3p,color = "#ff0000"){
-  
-  x3p$surface.matrix[x3p$mask == color] <- NA
-  
-  return(x3p)
-  
-}
 
 
 `-.gg` <- function(plot, layer) {
@@ -356,6 +214,7 @@ cmcPlot_colorChange <- function(reference,
                           target,
                           cmcClassifs,
                           cellToPlot = NULL,
+                          targetName = "target",
                           type = "faceted",
                           cmcCol = "originalMethod",
                           corrCol = "pairwiseCompCor"){
@@ -385,10 +244,6 @@ cmcPlot_colorChange <- function(reference,
   
   cmcIndexCol <- which(stringr::str_detect(names(cmcClassifs),cmcCol))
   
-  # cmcClassifs <- cmcClassifs %>%
-  #   dplyr::group_by(cellIndex) %>%
-  #   dplyr::filter(!!as.name(corrCol) == max(!!as.name(corrCol)))
-  
   targetCellData <- cmcClassifs %>%
     dplyr::select(tidyselect::all_of(c(targetCellCol,cellIndexCol,thetaCol,cmcIndexCol))) %>%
     purrr::pmap_dfr(~ impressions:::targetCellCorners(alignedTargetCell = ..1,
@@ -396,68 +251,12 @@ cmcPlot_colorChange <- function(reference,
                                         theta = ..3,
                                         cmcClassif = ..4,
                                         target = target))
-  
-  # referenceCells <- cmcClassifs %>%
-  #   dplyr::pull(referenceCellCol)
-  
-  # cellData <- cmcClassifs %>%
-  #   dplyr::select(c('cellIndexCol','referenceCellCol','cmcIndexCol')) %>%
-  #   purrr::pmap_dfr(~ {
-  #     
-  #     cellInds <- ..2$cmcR.info$cellRange %>%
-  #       stringr::str_remove("rows: ") %>%
-  #       stringr::str_remove("cols: ") %>%
-  #       stringr::str_split(pattern = ", ")
-  #     
-  #     cellInds_rows <- stringr::str_split(cellInds[[1]][1]," - ")[[1]]
-  #     cellInds_cols <- stringr::str_split(cellInds[[1]][2]," - ")[[1]]
-  #     
-  #     return(data.frame(rowStart = as.numeric(cellInds_rows[1]),
-  #                       rowEnd = as.numeric(cellInds_rows[2]),
-  #                       colStart = as.numeric(cellInds_cols[1]),
-  #                       colEnd = as.numeric(cellInds_cols[2])) %>%
-  #              dplyr::mutate(cellIndex = ..1,
-  #                            cmcClassif = ..3))
-  #     
-  #   }) %>%
-  #   dplyr::mutate(rowStart = max(rowEnd) - rowStart,
-  #                 rowEnd = max(rowEnd) - rowEnd,
-  #                 colMean = purrr::map2_dbl(colStart,colEnd,~ mean(c(.x,.y))),
-  #                 rowMean = purrr::map2_dbl(rowStart,rowEnd,~ mean(c(.x,.y))))
-  
   # ggplot2 complains about the guides
   suppressWarnings({
     
-    # refPlt <- x3pListPlot(list("reference" = reference)
-    #                       # ,height.colors =
-    #                       #   c('#1B1B1B','#404040','#7B7B7B','#B0B0B0','#DBDBDB','#F7F7F7','#E4E4E4','#C5C5C5','#999999','#717171','#4E4E4E')
-    #                       ) +
-    #   ggplot2::guides(fill = "none") +
-    #   ggnewscale::new_scale_fill() +
-    #   ggplot2::geom_rect(data = cellData,
-    #                      ggplot2::aes(xmin = colStart,xmax = colEnd,ymin = rowStart,ymax = rowEnd,fill = cmcClassif),
-    #                      alpha = .2,
-    #                      inherit.aes = FALSE) +
-    #   ggplot2::scale_fill_manual(values = c("black")) +
-    #   # ggplot2::scale_fill_manual(values = c("#313695","#a50026")) +
-    #   ggplot2::geom_text(data = cellData,
-    #                      ggplot2::aes(x = colMean,y = rowMean,label = cellIndex),inherit.aes = FALSE) +
-    #   ggplot2::guides(fill = ggplot2::guide_legend(order = 1)) +
-    #   ggplot2::theme(
-    #     legend.direction = "horizontal"
-    #   ) +
-    #   ggplot2::labs(fill = "CMC Classif.")
-    # 
-    # cmcLegend <- ggplotify::as.ggplot(cowplot::get_legend(refPlt)$grobs[[1]])
-    # 
-    # refPlt <- refPlt +
-    #   ggplot2::theme(legend.position = "none")
-    
-    plt <- x3pListPlot(list("target" = target)
-                       # , height.colors =
-                       #   c('#1B1B1B','#404040','#7B7B7B','#B0B0B0','#DBDBDB','#F7F7F7','#E4E4E4','#C5C5C5','#999999','#717171','#4E4E4E')
+    plt <- x3pListPlot(list("target" = target) %>% set_names(targetName)
                        ) +
-      ggplot2::theme(legend.position = "none")
+      theme(legend.position = "none")
     
     if(!is.null(cellToPlot)){
       
@@ -470,34 +269,22 @@ cmcPlot_colorChange <- function(reference,
       ggnewscale::new_scale_fill() +
       ggplot2::geom_raster(data = targetCellData,
                            ggplot2::aes(x = x,y = y,fill = cmcClassif),
-                           alpha = .2) +
-      ggplot2::scale_fill_manual(values = c("#313695","#a50026")) #+
-      # ggplot2::geom_text(data = targetCellData %>%
-      #                      dplyr::group_by(cellIndex) %>%
-      #                      dplyr::summarise(x = mean(x),
-      #                                       y = mean(y),
-      #                                       theta = unique(theta)),
-      #                    ggplot2::aes(x=x,y=y,label = cellIndex,angle = -1*theta))
+                           alpha = .2)
     
   })
-  
-  # library(patchwork)
-  # return((refPlt | plt))
   if(type == "list"){
     return(list(
-      # "reference" = refPlt,
-                "target" = plt
-                # ,"legend" = cmcLegend
+      "target" = plt
                 ))
   }
   
-  # return(patchwork::wrap_plots(refPlt,plt,cmcLegend,nrow = 2,heights = c(1,.1)))
   return(plt)
 }
 
 cmcPlot_interactive <- function(reference,
                                 target,
                                 cmcClassifs,
+                                scanNames = c("reference","target"),
                                 type = "faceted",
                                 cmcCol = "originalMethod",
                                 corrCol = "pairwiseCompCor"){
@@ -526,10 +313,6 @@ cmcPlot_interactive <- function(reference,
   thetaCol <- which(stringr::str_detect(names(cmcClassifs),"theta"))
   
   cmcIndexCol <- which(stringr::str_detect(names(cmcClassifs),cmcCol))
-  
-  # cmcClassifs <- cmcClassifs %>%
-  #   dplyr::group_by(cellIndex) %>%
-  #   dplyr::filter(!!as.name(corrCol) == max(!!as.name(corrCol)))
   
   targetCellData <- cmcClassifs %>%
     dplyr::select(all_of(c(targetCellCol,cellIndexCol,thetaCol,cmcIndexCol))) %>%
@@ -570,7 +353,7 @@ cmcPlot_interactive <- function(reference,
   # ggplot2 complains about the guides
   suppressWarnings({
     
-    refPlt <- x3pListPlot(list("reference" = reference),
+    refPlt <- x3pListPlot(list(reference) %>% set_names(scanNames[1]),
                           # height.colors =
                           #   c('#1B1B1B','#404040','#7B7B7B','#B0B0B0','#DBDBDB','#F7F7F7','#E4E4E4','#C5C5C5','#999999','#717171','#4E4E4E')
                           ) +
@@ -601,7 +384,7 @@ cmcPlot_interactive <- function(reference,
     refPlt <- refPlt +
       ggplot2::theme(legend.position = "none")
     
-    plt <- x3pListPlot(list("target" = target),
+    plt <- x3pListPlot(list(target) %>% set_names(scanNames[2]),
                        # height.colors =
                        #   c('#1B1B1B','#404040','#7B7B7B','#B0B0B0','#DBDBDB','#F7F7F7','#E4E4E4','#C5C5C5','#999999','#717171','#4E4E4E')
                        ) +

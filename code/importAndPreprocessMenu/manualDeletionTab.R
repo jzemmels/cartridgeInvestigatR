@@ -5,35 +5,30 @@ observeEvent(input$manualDeletionHelp,
              {
                
                showModal(modalDialog(
-                 title = "Help: Manual Deletion Tab",easyClose = TRUE,
-                 strong("Why would I use this tab?"),
+                 title = h3("Help: Manual Deletion Tab"),
+                 easyClose = TRUE,
+                 h4(strong("Why would I use this tab?")),
                  "Manually delete regions from a scan.",
                  br(),
                  br(),
-                 strong("What do I need to do before using this tab?"),
-                 "Click the 'Skip Automatic Pre-processing' button in the 'Import' tab or the 'Perform Automatic Pre-processing' button in the 'Automatic Pre-process' tab.",
+                 h4(strong("What do I need to do before using this tab?")),
+                 "Import scans to the app",
                  br(),
                  br(),
-                 strong("How do I use this tab?"),
-                 "Click and drag your cursor on the plot that appears to zoom-in to the region that you wish to delete.",
-                 br(),
-                 br(),
-                 "Scroll down the page to see the zoomed-in region.",
-                 "Left-click on this plot to place a point.",
-                 "Place three or more points to create a connected region.",
-                 "Click 'Reset Region' to remove all points.",
-                 br(),
-                 br(),
-                 "Start a new region by drawing a new rectangle on the plot of the full scan at the top of the page.",
-                 "Once you are happy with the annotated regions, click 'Preview Annotations' to delete these regions from the scan.",
-                 "If you would like to start over with manually annotating the selected scan, click the 'Reset All Annotations' button.",
-                 br(),
-                 br(),
-                 "Select another scan to manually delete regions from using the 'Select a processed scan to annotate' dropdown.",
-                 br(),
-                 br(),
-                 strong("What is next?"),
-                 "Once you are happy with the manually-deleted regions, move onto the Comparing stage."
+                 h4(strong("How do I use this tab?")),
+                 tags$ol(tags$li("Select a scan using 'Select an x3p to annotate'"),
+                         tags$li(HTML(paste0("Press ",strong('Next: Start Annotating')," to being annotating the scan."))),
+                         tags$li("Left-click on the plot to place a point. Place three or more points to create a connected region."),
+                         tags$li(HTML(paste0("Click ",strong('Confirm Current Region')," if you are happy the region you've created."))),
+                         tags$li(HTML(paste0("Click ",strong('Reset Current Region')," to remove all points."))),
+                         tags$li("Start a new region by drawing a new rectangle on the plot of the full scan at the top of the page."),
+                         tags$li(HTML(paste0("If you would like to start over, click ",strong('Choose a Different Scan'),"."))),
+                         tags$li(HTML(paste0("Once you are happy with the annotated regions, click ",strong('Next: Preview Annotations')," to preview the deletions. The plot on the right shows the selected scan with the annotated regions removed."))),
+                         tags$li(HTML(paste0("Click ",strong("I'm Happy with these Annotations")," if you are happy with the annotations. Otherwise, click ",strong("Choose a Different Scan")," to start over."))),
+                         tags$li("Return to step 1. to select a new scan or continue on to the next stages.")
+                 ),
+                h4("What is next?"),
+                HTML(paste0("Click ",strong("I would like to compare these scans")," once you are happy with the manual annotations to move onto the next stages."))
                ))
                
              })
@@ -356,8 +351,8 @@ observeEvent(input$manualProcZoom,{
                Column = x,
                Row = y) %>%
         dplyr::select(c('Scan',
-                 # `Region Number`,
-                 'Point','Column','Row'))
+                        # `Region Number`,
+                        'Point','Column','Row'))
       
       return(ret)
       
@@ -587,13 +582,13 @@ observeEvent(input$manualDeletion_confirmAnnotations,{
   # delete the masked values from the surface matrix
   x3pMasked <- x3pDeleteMask(x3pMasked)
   
-  x3pMasked$mask <- NULL
+  # x3pMasked$mask <- NULL
   
   # save the masked data out to a file
-  x3ptools::write_x3p(x3pMasked,
-                      file = paste0("data/User_scans/",input$manualDeletionSelection,"_user",session$user,
-                                    # "_time",str_replace_all(str_replace_all(str_squish(Sys.time()),":","-")," ","_"),
-                                    ".x3p"))
+  # x3ptools::write_x3p(x3pMasked,
+  #                     file = paste0("data/User_scans/",input$manualDeletionSelection,"_user",session$user,
+  #                                   # "_time",str_replace_all(str_replace_all(str_squish(Sys.time()),":","-")," ","_"),
+  #                                   ".x3p"))
   
   tmp <- tmp %>%
     mutate(x3p_processed = ifelse(x3pName == input$manualDeletionSelection,

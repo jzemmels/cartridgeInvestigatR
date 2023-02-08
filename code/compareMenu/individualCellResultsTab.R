@@ -3,33 +3,33 @@ observeEvent(input$comparisonResultsIndividualCellsHelp,
              {
                
                showModal(modalDialog(
-                 title = "Help: Individual Cell Results Tab",easyClose = TRUE,
-                 strong("Why would I use this tab?"),
+                 title = h3("Help: Individual Cell Results Tab"),
+                 easyClose = TRUE,
+                 h4(strong("Why would I use this tab?")),
                  "Explore the registrations of individual reference cells.",
-                 # "For example, in the 'Results Summary' tab you may identify cells that exhibit erratic behavior",
-                 "Use this tab to zoom into a cell and identify potential causes for noteworthy behavior.",
+                 "Use this tab to zoom into a cell and assess the alignment between it and the target scan.",
                  br(),
                  br(),
-                 strong("What do I need to do before using this tab?"),
-                 "Click the 'Perform Comparison' button in the 'Comparison Settings' tab and wait for the comparison to finish.",
+                 h4(strong("What do I need to do before using this tab?")),
+                 "Perform the comparison procedure using the Cell Grid Comparison tab.",
                  br(),
                  br(),
-                 strong("How do I use this tab?"),
-                 " Choose a reference scan that was divided into a grid of cells in the comparison procedure (possibly one or two choices, depending on if the 'Compare in both directions' checkbox was clicked in the previous tab).",
+                 h4(strong("How do I use this tab?")),
+                 "Choose a reference scan that was divided into a grid of cells in the comparison procedure (possibly one or two choices, depending on if the 'Compare in both directions' checkbox was clicked in the previous tab).",
                  br(),
                  br(),
                  "Click on a cell that appears in the plot below to visualize its registration in the other scan.",
                  "A plot will appear showing the cell's alignment in the other scan.",
-                 "Next to this will appear a comparison plot showing the similarities and differences between the reference cell and patch in the target scan to which the reference cell aligned.",
+                 "Below this will appear a comparison plot showing the similarities and differences between the reference cell and patch in the target scan to which the reference cell aligned.",
                  br(),
                  br(),
-                 "These visualizations may help explain why a cell aligns to a specific region in the target scan.",
+                 "These visualizations help explain why a cell aligns to a specific region in the target scan.",
                  "For example, the comparison plot separates each cell pair, shown in the left column, into similarities, shown in the middle column, and differences, shown in the right column.",
                  br(),
                  br(),
-                 strong("What is next?"),
-                 "If you would like to draw your own cells on a reference and target scan, move onto the 'Custom Cell' tab.",
-                 "Otherwise, if you would like to measure the similarity between the two compared cartridge cases, move onto the Scoring stage."
+                 h4(strong("What is next?")),
+                 "If you would like to draw your own cells on a reference and target scan, move onto the Custom Cell tab.",
+                 "Otherwise, you may return to Cell Grid Comparison tab to change the comparison parameters or to the Score stage to compute automatic similarity scores between the two scans."
                ))
                
              })
@@ -246,24 +246,17 @@ observeEvent(input$postComparisonClick,{
   # visualize on the target scan where the aligned target cell is
   output$targetScanCellPlot <- renderPlot(bg = "white",{
     
-    # debugonce(cmcPlot_colorChange)
-    
     plts <- cmcPlot_colorChange(reference = reference,
                                 target = target,
                                 cmcClassifs = alignedCellData %>% 
                                   mutate(originalMethod = "CMC"),
+                                targetName = otherScan,
                                 cellToPlot = paste0(input$postComparisonClick$panelvar2,", ",
                                                     input$postComparisonClick$panelvar1),
                                 type = "list")
     
     return(plts[[1]] +
              scale_fill_manual(values = "black"))
-    
-    # return(plts[[2]] +
-    #          scale_fill_manual(values = "black"))
-    
   })
-  
-  # # shinybusy::remove_modal_spinner()
   
 })

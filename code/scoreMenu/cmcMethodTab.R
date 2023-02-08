@@ -157,7 +157,7 @@ observeEvent(input$cmcPlotExecute,{
   
   compData <- scored::comparison_cellBased(reference = reference,
                                            target = target,
-                                           directio = "both",
+                                           direction = "both",
                                            thetas = seq(input$cmcTab_thetaRangeMin,input$cmcTab_thetaRangeMax,
                                                         by = input$cmcTab_thetaStep),
                                            numCells = cellGrid,
@@ -195,7 +195,7 @@ observeEvent(input$cmcPlotExecute,{
   shiny.r$cmcClassifs <<- bind_rows(cmc1,cmc2)
   shiny.r$cmcCounts <<- cmcCombined
   
-  output$cmcMethodPlot <- renderPlot(bg = "white",{
+  output$cmcMethodPlot_refToTarget <- renderPlot(bg = "white",{
     
     plt1 <- cmcR::cmcPlot(reference = reference,
                           target = target,
@@ -208,11 +208,17 @@ observeEvent(input$cmcPlotExecute,{
                                                     group_by(cellIndex) %>%
                                                     filter(fft_ccf == max(fft_ccf)) %>%
                                                     ungroup()),
-                          cmcCol = "originalMethodClassif",type = "list")
+                          cmcCol = "originalMethodClassif",
+                          type = "list")
     
-    # return(plt1)
+    return(patchwork::wrap_plots(plt1[[1]],
+                                 plt1[[2]],
+                                 plt1[[3]],nrow = 3,
+                                 heights = c(1,1.3,.1)))
     
-    # if(input$bothDirectionsCheck){
+  })
+  
+  output$cmcMethodPlot_targetToRef <- renderPlot(bg = "white",{
     plt2 <- cmcR::cmcPlot(reference = target,
                           target = reference,
                           cmcClassifs = bind_rows(cmc2 %>%
@@ -224,16 +230,17 @@ observeEvent(input$cmcPlotExecute,{
                                                     group_by(cellIndex) %>%
                                                     filter(fft_ccf == max(fft_ccf)) %>%
                                                     ungroup()),
-                          cmcCol = "originalMethodClassif",type = "list")
+                          cmcCol = "originalMethodClassif",
+                          type = "list")
     
     
-    return(patchwork::wrap_plots(plt1[[1]],plt2[[1]],
-                                 plt1[[2]],plt2[[2]],
-                                 plt1[[3]],nrow = 3,
+    return(patchwork::wrap_plots(plt2[[1]],
+                                 plt2[[2]],
+                                 plt2[[3]],nrow = 3,
                                  heights = c(1,1.3,.1)))
-    # }
     
   })
+  
   
   output$cmcMethodInformation_refToTarget <- renderUI({
     

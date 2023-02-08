@@ -5,17 +5,18 @@ observeEvent(input$customCellHelp,
              {
                
                showModal(modalDialog(
-                 title = "Help: Custom Cell Tab",easyClose = TRUE,
-                 strong("Why would I use this tab?"),
+                 title = h3("Help: Custom Cell Tab"),
+                 easyClose = TRUE,
+                 h4(strong("Why would I use this tab?")),
                  "Draw your own cell on a reference scan to compare to a target scan",
                  "For example, you may identify a region of interest on a scan after a visual inspection (e.g., in the Preprocessing stage) or after studying the comparison results (e.g., using the 'Comparison Results' tabs)",
                  br(),
                  br(),
-                 strong("What do I need to do before using this tab?"),
+                 h4(strong("What do I need to do before using this tab?")),
                  "Preprocess uploaded scans in the Preprocessing stage or click the 'Skip Automatic Pre-processing' button in the 'Import' tab.",
                  br(),
                  br(),
-                 strong("How do I use this tab?"),
+                 h4(strong("How do I use this tab?")),
                  "Select the type of cell that you would like to draw (either rectangular or hand-drawn).",
                  "Then select a reference scan upon which you will draw your custom cell.",
                  "Select a target scan to which the custom cell will be compared.",
@@ -31,14 +32,13 @@ observeEvent(input$customCellHelp,
                  "To start over, click the 'Reset Hand-drawn Cell' button.",
                  br(),
                  br(),
-                 "Once you are happy with the custom cell, click the 'Compare Custom Cell' button.",
+                 HTML(paste0("Click the ",strong('Compare Custom Cell')," button once you are happy with the custom cell.")),
                  "A plot will appear showing the cell's alignment in the other scan.",
                  "Next to this will appear a comparison plot showing the similarities and differences between the reference cell and patch in the target scan to which the reference cell aligned.",
                  br(),
                  br(),
-                 strong("What is next?"),
-                 "You can return to either of the 'Comparison Results' tabs to identify other cells or regions of interest.",
-                 "Otherwise, if you would like to measure the similarity between the two compared cartridge cases, move onto the Scoring stage."
+                 h4(strong("What is next?")),
+                 "Move on to the Score stage to compute automatic similarity scores between the two scans."
                ))
                
              })
@@ -259,29 +259,10 @@ observeEvent(input$customCellExecute,{
                        1:length(thetas),
                        function(theta,ind){
                          
-                         # if(input$customCellType == "Rectangular"){
-                         
-                         # 
-                         
                          dat <- comparison_customCell(refCell,
                                                       target,
                                                       theta,
                                                       sideLengthMultiplier = input$cellRegionProp_customCell)
-                         
-                         # }
-                         # else{
-                         #   
-                         #   # 
-                         #   
-                         #   dat <- comparison_allTogether(reference = refCell,
-                         #                                 target = target,
-                         #                                 theta = theta,
-                         #                                 numCells = c(1,1),
-                         #                                 sideLengthMultiplier = nrow(target$surface.matrix)/nrow(refCell$surface.matrix),
-                         #                                 maxMissingProp = 1,
-                         #                                 returnX3Ps = TRUE)
-                         #   
-                         # }
                          
                          update_modal_progress(value = (ind)*(1/length(thetas)),
                                                text = paste0("Comparing custom cell to ", input$targetSelect_customCell," at rotation ",theta,"°"))
@@ -323,6 +304,7 @@ observeEvent(input$customCellExecute,{
                                 target = target,
                                 cmcClassifs = alignedCellData %>%
                                   mutate(originalMethod = "CMC"),
+                                targetName = input$targetSelect_customCell,
                                 type = "list")
     
     return(plts[[1]] +

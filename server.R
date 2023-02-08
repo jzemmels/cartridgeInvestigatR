@@ -17,6 +17,7 @@ library(raster)
 server = function(input, output, session) {
   
   source("code/cartridgeInvestigatR_helpers.R",local = TRUE)
+  source("code/preProcessFunction_helpers.R",local = TRUE)
   
   # hard resetting will take you back to the Import tab
   observeEvent(input$app_hardReset,{
@@ -61,7 +62,7 @@ server = function(input, output, session) {
       
       req(input$comparingTabs)
       
-      if(input$comparingTabs == "Comparison Settings"){
+      if(input$comparingTabs == "Cell Grid Comparison"){
         
         return(actionButton(inputId = "comparisonParametersHelp",
                             label = "Help",
@@ -174,7 +175,7 @@ server = function(input, output, session) {
   source("code/scoreMenu/acesAlgorithmTab.R",local = TRUE)
   
   observeEvent(list(input$score_referenceSelect,input$score_targetSelect),{
-      
+    
     if(input$score_referenceSelect != "" & input$score_targetSelect != ""){
       
       shinyjs::enable(id = "score_previewScans")
@@ -254,10 +255,10 @@ server = function(input, output, session) {
       output$scoreSettings_ui <- renderUI({
         
         ret <- tagList(#br(),
-                       actionButton(inputId = "acesCalculate",
-                                    style="color: #fff; background-color: #95bb72; border-color: #4b6043",
-                                    icon = icon("play"),
-                                    label = "Estimate Match Probability"))
+          actionButton(inputId = "acesCalculate",
+                       style="color: #fff; background-color: #95bb72; border-color: #4b6043",
+                       icon = icon("play"),
+                       label = "Estimate Match Probability"))
         
         return(ret)
       })

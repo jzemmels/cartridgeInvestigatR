@@ -3,22 +3,26 @@ observeEvent(input$importHelp,
              {
                
                showModal(modalDialog(
-                 title = "Help: Import Tab",easyClose = TRUE,
-                 strong("Why would I use this tab?"),
+                 title = h3("Help: Import Tab"),easyClose = TRUE,
+                 h4(strong("Why would I use this tab?")),
                  "Upload x3p files to the app.",
                  br(),
                  br(),
-                 strong("What do I need to do before using this tab?"),
-                 "Download cartridge case scans to your computer as x3p files",
+                 h4(strong("What do I need to do before using this tab?")),
+                 "Download cartridge case scans to your computer as x3p files.",
+                 "The NIST Ballistics Toolmark Research Database contains examples of x3p files: ",tags$a(href = "https://tsapps.nist.gov/NRBTD/Studies/Search",
+                                                                                                          "https://tsapps.nist.gov/NRBTD/Studies/Search",
+                                                                                                          target = "_blank"),
+                 "Alternatively, this application comes pre-loaded with scans in the 'app_x3pScans' folder for demonstration.",
                  br(),
                  br(),
-                 strong("How do I use this tab?"),
-                 "Click the 'Select a folder containing x3p files' button to upload x3p scans to the app.",
+                 h4(strong("How do I use this tab?")),
+                 HTML(paste0("Click the ",strong('Select a folder containing x3p files')," button to upload x3p scans to the app.")),
                  br(),
                  br(),
-                 strong("What is next?"),
-                 "If the scans are already preprocessed to your liking, then click the 'Skip Automatic Pre-processing' button and move on to 'Manual Deletion' tab or the Comparing stage.",
-                 "Otherwise, continue onto the 'Automatic Pre-process' tab."
+                 h4(strong("What is next?")),
+                 HTML(paste0("Click the ",strong('Looks good! I want to compare these scans')," button if the scans are already pre-processed to your liking to move on to the next stages.")),
+                 HTML(paste0("Otherwise, click the ",strong('Needs Automatic Pre-processing')," button if all of the scans require the same pre-processing or ",strong('Needs Manual Pre-processing')," if specific scans require pre-processing."))
                ))
                
              })
@@ -183,7 +187,7 @@ observeEvent(input$x3pdir,{
         br(),
         br(),
         actionButton(inputId = "import_goToManualPreprocess",
-                     label = "Needs Manual Preprocessing",
+                     label = "Needs Manual Pre-processing",
                      icon = fontawesome::fa_i("hand-scissors"),
                      width = 300),
         br(),
