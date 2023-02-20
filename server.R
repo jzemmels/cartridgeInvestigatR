@@ -50,7 +50,7 @@ server = function(input, output, session) {
          "You must complete the Import + Pre-processing stage before moving on to Explore or Score."),
       # br(),
       h3(strong("Basic workflow")),
-      HTML("<div class='row' align='center'> <img src='workflowDiagram.png' alt='Workflow Diagram'> </div>"),
+      HTML("<div class='row' align='center'> <img src='workflowDiagram.png' alt='Workflow Diagram' width='500'> </div>"),
       # tags$p(tags$img(src = "workflowDiagram.png",width = "30%",class = "text-align:center")),
       h4("To start, make sure that you have cartridge case scans stored as x3p files on your computer."),
       h4("If you would simply like to explore this app, you can find example scans in the home directory of this app."),
@@ -218,7 +218,7 @@ server = function(input, output, session) {
   })
   
   # upload from rds file
-  volumes <- c(Home = paste0(fs::path_wd(),"/app_x3pscans"), "R Installation" = R.home(), shinyFiles::getVolumes()())
+  volumes <- c(Home = "data", "R Installation" = R.home(), shinyFiles::getVolumes()())
   # shinyFileChoose(input, "file1", roots = volumes, session = session)
   
   # upload from x3p folder

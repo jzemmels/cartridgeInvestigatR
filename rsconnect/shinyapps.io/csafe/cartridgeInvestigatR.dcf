@@ -5,10 +5,10 @@ account: csafe
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 6704900
-bundleId: 6859004
+bundleId: 6867878
 url: https://csafe.shinyapps.io/cartridgeInvestigatR/
-when: 1676659028.37717
-lastSyncTime: 1676659028.37718
+when: 1676929085.34155
+lastSyncTime: 1676929085.34156
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|inst/R/server_main - Copy.R|inst/R/server_main.R|inst/R/server_sig_compare.R|R/global_helper.R|R/x3p_modules.R|README.md|www/anim.gif|www/csafe-logo-90.png|www/workflowDiagram.png|demo|slides
+ignoredFiles: .RData|inst/R/server_main - Copy.R|inst/R/server_main.R|inst/R/server_sig_compare.R|R/global_helper.R|R/x3p_modules.R|README.md|www/csafe-logo-90.png|www/workflowDiagram.png|demo|slides
