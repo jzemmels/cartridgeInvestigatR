@@ -21,7 +21,7 @@ observeEvent(input$importHelp,
                  br(),
                  br(),
                  h4(strong("What is next?")),
-                 HTML(paste0("Click the ",strong('Looks good! I want to compare these scans')," button if the scans are already pre-processed to your liking to move on to the next stages.")),
+                 HTML(paste0("Click the ",strong('I would like to compare these scans')," button if the scans are already pre-processed to your liking to move on to the next stages.")),
                  HTML(paste0("Otherwise, click the ",strong('Needs Automatic Pre-processing')," button if all of the scans require the same pre-processing or ",strong('Needs Manual Pre-processing')," if specific scans require pre-processing."))
                ))
                
@@ -193,7 +193,7 @@ observeEvent(input$x3pdir,{
         br(),
         br(),
         actionButton(inputId = "import_goToComparison",
-                     label = "Looks good! I want to compare these scans.",
+                     label = "I would like to compare these scans",
                      style="color: #fff; background-color: #95bb72; border-color: #4b6043",
                      icon = icon("pencil-ruler"),
                      width = 300))
