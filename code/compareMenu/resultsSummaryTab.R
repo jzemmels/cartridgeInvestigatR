@@ -341,7 +341,8 @@ observeEvent(input$comparisonSummary_referenceSelect,{
       
       
       allPlts <- list((cmcPlts[[1]] | cmcPlts[[2]]),
-                      scatterplot_transByRot,dotPlot_cellwiseReg,
+                      dotPlot_cellwiseReg,
+                      scatterplot_transByRot,
                       registrationFeaturePlt,densityFeaturePlt,visualDiagnosticFeaturePlt)
       
       

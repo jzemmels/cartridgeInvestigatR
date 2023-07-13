@@ -35,18 +35,16 @@ preProcess_params <- function(preProcStep,ind){
 # return a preprocessing function that with necessary parameters filled-in
 preProcess_partial <- function(preProcStep,paramValues){
   
-  # 
-  
   if(preProcStep == "Downsample"){
     
-    if((paramValues[[1]] <= 0) | ((paramValues[[1]] %% 1) != 0)){
+    if((paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]] <= 0) | ((paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]] %% 1) != 0)){
       
       showNotification("Enter a positive whole number for the Stride parameter of the Downsample step",type = "error")
-      validate(need(paramValues[[1]] > 0 & ((paramValues[[1]] %% 1) == 0),message = FALSE))
+      validate(need(paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]] > 0 & ((paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]] %% 1) == 0),message = FALSE))
       
     }
     
-    return(purrr::partial(x3ptools::x3p_sample,m = !!paramValues[[1]]))
+    return(purrr::partial(x3ptools::x3p_sample,m = !!paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]]))
     
   }
   if(preProcStep == "Crop"){
@@ -62,14 +60,14 @@ preProcess_partial <- function(preProcStep,paramValues){
       
     }
     
-    return(purrr::partial(cmcR::preProcess_crop,region = tolower(!!paramValues[[1]]),offset = !!paramValues[[2]]))
+    return(purrr::partial(cmcR::preProcess_crop,region = tolower(!!paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]]),offset = !!paramValues[[which(str_detect(string = names(paramValues),pattern = "params2"))]]))
     
   }
   if(preProcStep == "Level"){
     
-    if(paramValues[[1]] == "Mean"){
+    if(paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]] == "Mean"){
       
-      return(purrr::partial(cmcR::preProcess_removeTrend,statistic = tolower(!!paramValues[[1]])))
+      return(purrr::partial(cmcR::preProcess_removeTrend,statistic = tolower(!!paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]])))
       
     }
     else{
@@ -89,7 +87,7 @@ preProcess_partial <- function(preProcStep,paramValues){
       
     }
     
-    return(purrr::partial(cmcR::preProcess_erode,region = tolower(!!paramValues[[1]]),morphRadius = !!paramValues[[2]]))
+    return(purrr::partial(cmcR::preProcess_erode,region = tolower(!!paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]]),morphRadius = !!paramValues[[which(str_detect(string = names(paramValues),pattern = "params2"))]]))
     
   }
   if(preProcStep == "Filter"){
@@ -101,7 +99,7 @@ preProcess_partial <- function(preProcStep,paramValues){
       .[[1]] %>%
       purrr::map_dbl(as.numeric)
     
-    if(paramValues[[1]] == "Lowpass"){
+    if(paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]] == "Lowpass"){
       
       if(length(filtParams) != 1 | any(filtParams) <= 0){
         
@@ -131,15 +129,31 @@ preProcess_partial <- function(preProcStep,paramValues){
   }
   if(preProcStep == "Delete"){
     
-    return(purrr::partial(x3pDeleteMask,color = "#ff0000"))
+    # browser()
     
+    validate(need(str_detect(paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]],"^\\#[0-9]{1,}") | paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]] == "NULL",message = FALSE))
+    
+    return(purrr::partial(x3pDeleteMask,color = paramValues[[which(str_detect(string = names(paramValues),pattern = "params1"))]]))
+    
+  }
+  if(preProcStep == "Trim"){
+    return(purrr::partial(impressions::x3p_cropWS,croppingThresh = 1))
   }
   
 }
 
 x3pDeleteMask <- function(x3p,color = "#ff0000"){
   
-  x3p$surface.matrix[x3p$mask == color] <- NA
+  if(color == "NULL"){
+    color <- names(table(dat$mask))[which.max(table(dat$mask))]
+  }
+  
+  if(all(dim(x3p$surface.matrix) == dim(x3p$mask))){
+    x3p$surface.matrix[x3p$mask == color] <- NA
+  }
+  else{
+    x3p$surface.matrix[t(as.matrix(x3p$mask)) == color] <- NA
+  }
   
   return(x3p)
   

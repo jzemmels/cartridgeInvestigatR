@@ -69,7 +69,9 @@ output$customCellFullScanPlot <- renderPlot(bg = "white",{
     .[[1]]
   
   
-  customCellPlt <<- x3pListPlot(list(reference) %>% set_names(selectedScan))
+  customCellPlt <<- x3pListPlot(list(reference) %>% set_names(selectedScan)) +
+    theme(strip.text = element_blank()) +
+    labs(title = "Click + drag to draw a rectangle here")
   
   
   if(input$customCellType == "Hand-drawn"){
@@ -131,7 +133,8 @@ observeEvent(input$customCellBrush,{
       geom_polygon(data = plottedPointsCustomCell$dat,
                    aes(x=x,y=y),inherit.aes = FALSE,fill = "black",alpha = .2) +
       ggrepel::geom_text_repel(data = plottedPointsCustomCell$dat,
-                               aes(x=x,y=y,label = pointNum),inherit.aes = FALSE)
+                               aes(x=x,y=y,label = pointNum),inherit.aes = FALSE) +
+      labs(title = "Click to place 3 or more points here")
     
     return(customCellPlt_zoom)
     

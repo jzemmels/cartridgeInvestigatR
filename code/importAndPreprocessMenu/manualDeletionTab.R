@@ -27,8 +27,8 @@ observeEvent(input$manualDeletionHelp,
                          tags$li(HTML(paste0("Click ",strong("I'm Happy with these Annotations")," if you are happy with the annotations. Otherwise, click ",strong("Choose a Different Scan")," to start over."))),
                          tags$li("Return to step 1. to select a new scan or continue on to the next stages.")
                  ),
-                h4("What is next?"),
-                HTML(paste0("Click ",strong("I would like to compare these scans")," once you are happy with the manual annotations to move onto the next stages."))
+                 h4("What is next?"),
+                 HTML(paste0("Click ",strong("I would like to compare these scans")," once you are happy with the manual annotations to move onto the next stages."))
                ))
                
              })
@@ -197,6 +197,8 @@ output$manualDeletion_annotatePlot <- renderPlot(bg = "white",{
                                       pull(x3p_processed) %>%
                                       .[[1]]) %>%
                                  set_names(input$manualDeletionSelection)) +
+    theme(strip.text = element_blank()) +
+    labs(title = "Click + drag to draw a rectangle here") +
     geom_point(data = plottedPoints$dat %>%
                  filter(x3p == input$manualDeletionSelection),
                aes(x=x,y=y)) +
@@ -292,9 +294,9 @@ observeEvent(input$manualProcZoom,{
   output$manualDeletion_annotateOptions <- renderUI({
     
     return(list(
-      h4("On the zoomed in plot that appears, left-click to place points. Place three or more points to form an annotated region to be removed from the scan."),
-      h4('Once you are happy with the region, click "Confirm Current Region." Start a new region by drawing a new rectangle on the scan plot.'),
-      h4('Press "Next: Preview Annotations" when you are finished annotating.'),
+      # h4("On the zoomed in plot that appears, left-click to place points. Place three or more points to form an annotated region to be removed from the scan."),
+      # h4('Once you are happy with the region, click "Confirm Current Region." Start a new region by drawing a new rectangle on the scan plot.'),
+      # h4('Press "Next: Preview Annotations" when you are finished annotating.'),
       actionButton(inputId = "newManualRegion",
                    icon = fontawesome::fa_i("check"),
                    style="color: #000; background-color: #fff; border-color: #95bb72",
@@ -386,6 +388,8 @@ observeEvent(input$manualProcZoom,{
                   ylim = c(unique(zoom$ymin),unique(zoom$ymax)),
                   expand = FALSE,
                   ratio = 1) +
+      theme(strip.text = element_blank()) +
+      labs(title = "Click to place 3 or more points here") +
       geom_point(data = pts_filtered,
                  aes(x=x,y=y)) +
       geom_polygon(data = pts_filtered,
@@ -509,10 +513,10 @@ output$manualDeletion_deletionPreview_plot <- renderPlot(bg = "white",width = 10
   x3pMasked <- x3p
   # the colorSurface matrix technically needs to be transposed to "agree"
   # with the actual surface matrix
-  x3pMasked <- x3ptools::x3p_add_mask(x3pMasked,t(colorSurface))
+  x3pMasked <- x3ptools::x3p_add_mask(x3pMasked,colorSurface)
   
   # delete the masked values from the surface matrix
-  x3pMasked <- x3pDeleteMask(x3pMasked)
+  x3pMasked <- impressions::x3p_delete(x3pMasked,mask_vals = "#ff0000")
   
   x3pMasked$mask <- NULL
   
@@ -577,10 +581,12 @@ observeEvent(input$manualDeletion_confirmAnnotations,{
   x3pMasked <- x3p
   # the colorSurface matrix technically needs to be transposed to "agree"
   # with the actual surface matrix
-  x3pMasked <- x3ptools::x3p_add_mask(x3pMasked,t(colorSurface))
+  x3pMasked <- x3ptools::x3p_add_mask(x3pMasked,colorSurface)
   
   # delete the masked values from the surface matrix
-  x3pMasked <- x3pDeleteMask(x3pMasked)
+  x3pMasked <- impressions::x3p_delete(x3pMasked,mask_vals = "#ff0000")
+  
+  # x3pMasked$mask <- NULL
   
   # x3pMasked$mask <- NULL
   
@@ -632,9 +638,9 @@ observeEvent(input$manualDeletion_confirmAnnotations,{
 
 observeEvent(input$manualDeletion_goToComparison,{
   
-  hideTab(inputId = "preprocessingTabs","Import",session = session)
-  hideTab(inputId = "preprocessingTabs","Manual Deletion - Select a Scan",session = session)
-  hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
+  # hideTab(inputId = "preprocessingTabs","Import",session = session)
+  # hideTab(inputId = "preprocessingTabs","Manual Deletion - Select a Scan",session = session)
+  # hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
   showTab(inputId = "preprocessingTabs",target = "Pre-processing Completed",session = session)
   
   # output$import_nextStep_ui <- renderUI("Click on '2. Compare' in the sidebar menu")
@@ -659,7 +665,7 @@ observeEvent(input$manualDeletion_goToComparison,{
     
   })
   
-  shinyjs::toggleClass(selector = "body", class = "sidebar-collapse")
+  shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
   
   # updateTabItems(session = session,inputId = "stages",selected = "comparing")
   updateTabsetPanel(session = session,"preprocessingTabs",selected = "Pre-processing Completed")

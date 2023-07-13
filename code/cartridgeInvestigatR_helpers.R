@@ -1,3 +1,30 @@
+read_bullet_local <- function(folder = NULL, ext = ".x3p$", urllist = NULL, size = NA) {
+  assertthat::assert_that(!is.null(folder) | !is.null(urllist))
+  
+  if (!is.null(folder) & !is.null(urllist)) {
+    message("folder and urllist both provided. Reading x3p files from folder.")
+  }
+  
+  if (!is.null(folder)) {
+    # the following assertion creates weird error in Windows when x ends in /
+    lapply(folder, function(x) assertthat::assert_that(assertthat::is.dir(x)))
+    set <- dir(folder, pattern = ext, recursive = TRUE, full.names = TRUE)
+    message(sprintf("%d files found. Reading ...", length(set)))
+  } else {
+    lapply(unlist(urllist), function(x) {
+      assertthat::assert_that(grepl("^(http|www)", x))
+    })
+    set <- unlist(urllist)
+  }
+  if (length(set) == 0) stop("No files found. Check path/URL.")
+  
+  read_x3p_try <- function(...) try(x3ptools::read_x3p(...))
+  if (ext == ".x3p$" | ext == "x3p") {
+    scans <- lapply(set, FUN = read_x3p_try, size = size)
+  }
+  as_tibble(data.frame(source = set, x3p = I(scans), stringsAsFactors = F))
+}
+
 x3pActionButtonUI <- function(id, label = "Click me!", col1 = 3, col2 = 8, offset = 1) {
   ns <- NS(id)
   
@@ -549,4 +576,29 @@ old_draw_frames <- function (plot, frames, device, ref_frame, ...)
     frame_vars$frame_source <- files
   frame_vars
 }
+
+# sometimes the estimated class probabilities are very close to 0 or 1, so
+# simply rounding to 4 decimal places doesn't quite cut it. This function ensure
+# that we don't unintentionally round to "0" or "1," which doesn't feel very
+# precise
+fancyRound <- function(number,roundMax = 4){
+  
+  ch <- format(number,scientific = FALSE,digits = 20)
+  
+  if(round(number,roundMax) == 0){
+    ch <- str_sub(ch,start = 1,end = str_locate(format(ch,scientific = FALSE,digits = 20),"(?!0|\\.)")[1])
+  }
+  else if(round(number,roundMax) == 1){
+    ch <- str_sub(ch,start = 3,end = 2 + str_locate(format(str_remove(ch,"^0\\."),scientific = FALSE,digits = 20),"(?!9)")[1])
+    ch <- paste0("0.",ch)
+  }
+  else{
+    ch <- format(round(number,roundMax),scientific = FALSE)
+  }
+  
+  
+  return(ch)
+  
+}
+
 

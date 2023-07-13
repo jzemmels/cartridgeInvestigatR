@@ -30,12 +30,13 @@ observeEvent(input$importHelp,
 observeEvent(input$x3pdir, {
   
   if(!is.integer(input$x3pdir)) {
+    
     dir <- shinyFiles::parseDirPath(volumes, input$x3pdir)
     
     # # shinybusy::show_modal_spinner(spin = "fingerprint", text = "Loading x3p files...")
     
     # initialize shiny.r
-    shiny.r$data <<- try(bulletxtrctr::read_bullet(dir))
+    shiny.r$data <<- try(read_bullet_local(dir))
     dataPar <<- try(data_CheckPar(isolate(shiny.r$data)))
     shiny.r$data$type <<- 'NA'
     shiny.r$data$comments <<- ''
@@ -52,16 +53,135 @@ observeEvent(input$x3pdir, {
   } 
 })
 
+# the user might have chosen to just use an example set of scans
+observeEvent(input$exampleScanSet,#ignoreInit = TRUE,
+             {
+               
+               if(input$exampleScanSet == "Matching Pair"){
+                 dir <- shinyFiles::parseDirPath(volumes,list(path = list("","kmPair"),root = "Home"))
+               }
+               else if(input$exampleScanSet == "Non-Matching Pair"){
+                 dir <- shinyFiles::parseDirPath(volumes,list(path = list("","knmPair"),root = "Home"))
+               }
+               else if(input$exampleScanSet == "Matching Pair (Unprocessed)"){
+                 dir <- shinyFiles::parseDirPath(volumes,list(path = list("","kmPair_raw"),root = "Home"))
+               }
+               else if(input$exampleScanSet == "Unknown Source Triplet"){
+                 dir <- shinyFiles::parseDirPath(volumes,list(path = list("","unknownSource_1"),root = "Home"))
+               }
+               
+               
+               req(dir)
+               # # shinybusy::show_modal_spinner(spin = "fingerprint", text = "Loading x3p files...")
+               
+               # initialize shiny.r
+               shiny.r$data <<- try(read_bullet_local(dir))
+               dataPar <<- try(data_CheckPar(isolate(shiny.r$data)))
+               shiny.r$data$type <<- 'NA'
+               shiny.r$data$comments <<- ''
+               
+               # # shinybusy::remove_modal_spinner()
+               
+               output$x3pdir_prompt <- renderText({
+                 validate(need(shiny.r$data, message = "No x3p files found in this directory!"))
+                 paste("finished loading x3p files.")
+               })
+               
+               
+               NOSHINY_TT <<- FALSE
+               
+               tmp <- isolate(shiny.r$data)
+               
+               tmp <- tmp %>%
+                 mutate(x3p = map(x3p,~ {
+                   
+                   if(max(abs(.$surface.matrix),na.rm = TRUE) < 1e-4){
+                     
+                     .$surface.matrix <- .$surface.matrix*1e6
+                     
+                   }
+                   
+                   return(.)
+                   
+                 }),
+                 # x3pName = paste0("x3p",1:nrow(.)),
+                 x3pName = source %>% 
+                   stringr::str_split("/") %>% 
+                   map_chr(~ str_remove(.[length(.)],"\\.x3p")),
+                 x3p_processed = x3p,
+                 autoPreprocessPerformed = FALSE)
+               
+               shiny.r$data <<- tmp
+               
+               output$infoInitX3P <- renderText({
+                 
+                 purrr::map2_chr(tmp$x3p,1:length(tmp$x3p),
+                                 ~ {
+                                   
+                                   paste0("x3p",.y,
+                                          " has ",nrow(.x$surface.matrix)," rows and ",
+                                          ncol(.x$surface.matrix)," columns")
+                                   
+                                 }) %>%
+                   paste0(collapse = "\n")
+                 
+               })
+               
+               output$pltInitX3P <- renderPlot(bg = "white",{
+                 
+                 cmcR::x3pListPlot(tmp$x3p %>% set_names(tmp$x3pName))
+                 
+               }) 
+               
+               updateSelectInput(session = session,
+                                 inputId = "manualDeletionSelection",
+                                 choices = c(tmp$x3pName),
+                                 selected = tmp$x3pName[1])
+               
+               updateSelectInput(session = session,
+                                 inputId = "referenceSelect",
+                                 choices = c(tmp$x3pName),
+                                 selected = tmp$x3pName[1])
+               
+               updateSelectInput(session = session,
+                                 inputId = "targetSelect",
+                                 choices = c(tmp$x3pName),
+                                 selected = tmp$x3pName[2])
+               
+               updateSelectInput(session = session,
+                                 inputId = "customCellSelection",
+                                 choices = c(tmp$x3pName),
+                                 selected = tmp$x3pName[1])
+               
+               updateSelectInput(session = session,
+                                 inputId = "targetSelect_customCell",
+                                 choices = c(tmp$x3pName),
+                                 selected = tmp$x3pName[2])
+               
+               updateSelectInput(session = session,
+                                 inputId = "score_referenceSelect",
+                                 choices = c(tmp$x3pName),
+                                 selected = tmp$x3pName[1])
+               
+               updateSelectInput(session = session,
+                                 inputId = "score_targetSelect",
+                                 choices = c("",tmp$x3pName),
+                                 selected = tmp$x3pName[2])
+               
+             })
+
 # once a folder of x3p files is selected, update a bunch of stuff including:
 # - plot the scans in the first tab
 # - print the dimensions of the scans
 # - update the Initial X3P select inputs to reflect the choices of x3p
 # - update the referenceSelect and targetSelect selectInputs in the Comparison Parameters tab
+# toListen_import <- reactive({list(, input$exampleScanSet)})
+
 observeEvent(input$x3pdir,
              {
                req(shiny.r$data)
                req(nrow(shiny.r$data) > 0)
-               req(input$x3pdir)
+               # req(!is.null(input$x3pdir) | !is.null(input$exampleScanSet))
                tmp <- isolate(shiny.r$data)
                
                tmp <- tmp %>%
@@ -174,40 +294,40 @@ observeEvent(input$x3pdir,
 # Tab transitions:
 
 # after importing data, render buttons to move to the next steps
-observeEvent(input$x3pdir,{
-  
-  output$import_nextStep_ui <- renderUI({
-    box(width = 12,align = "center",
-        h4("Choose one of the following"),
-        br(),
-        actionButton(inputId = "import_goToAutomaticPreprocess",
-                     label = "Needs Automatic Pre-processing",
-                     fontawesome::fa_i("fas fa-cut"),
-                     width = 300),
-        br(),
-        br(),
-        actionButton(inputId = "import_goToManualPreprocess",
-                     label = "Needs Manual Pre-processing",
-                     icon = fontawesome::fa_i("hand-scissors"),
-                     width = 300),
-        br(),
-        br(),
-        actionButton(inputId = "import_goToComparison",
-                     label = "I would like to compare these scans",
-                     style="color: #fff; background-color: #95bb72; border-color: #4b6043",
-                     icon = icon("pencil-ruler"),
-                     width = 300))
-  })
-  
-})
+# observeEvent(input$x3pdir,{
+#   
+#   output$import_nextStep_ui <- renderUI({
+#     box(width = 12,align = "center",
+#         h4("Choose one of the following"),
+#         br(),
+#         actionButton(inputId = "import_goToAutomaticPreprocess",
+#                      label = "Needs Automatic Pre-processing",
+#                      fontawesome::fa_i("fas fa-cut"),
+#                      width = 300),
+#         br(),
+#         br(),
+#         actionButton(inputId = "import_goToManualPreprocess",
+#                      label = "Needs Manual Pre-processing",
+#                      icon = fontawesome::fa_i("hand-scissors"),
+#                      width = 300),
+#         br(),
+#         br(),
+#         actionButton(inputId = "import_goToComparison",
+#                      label = "I would like to compare these scans",
+#                      style="color: #fff; background-color: #95bb72; border-color: #4b6043",
+#                      icon = icon("pencil-ruler"),
+#                      width = 300))
+#   })
+#   
+# })
 
 # If "Looks Good!" button is selected, then move onto the Compare Stage
 
-observeEvent(input$import_goToComparison,{
+observeEvent(input$import_goToComparison,ignoreInit = TRUE,{
   
-  hideTab(inputId = "preprocessingTabs","Import",session = session)
-  hideTab(inputId = "preprocessingTabs","Manual Deletion - Select a Scan",session = session)
-  hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
+  # hideTab(inputId = "preprocessingTabs","Import",session = session)
+  # hideTab(inputId = "preprocessingTabs","Manual Deletion - Select a Scan",session = session)
+  # hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
   showTab(inputId = "preprocessingTabs",target = "Pre-processing Completed",session = session)
   
   # output$import_nextStep_ui <- renderUI("Click on '2. Compare' in the sidebar menu")
@@ -232,7 +352,7 @@ observeEvent(input$import_goToComparison,{
     
   })
   
-  shinyjs::toggleClass(selector = "body", class = "sidebar-collapse")
+  shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
   
   # updateTabItems(session = session,inputId = "stages",selected = "comparing")
   updateTabsetPanel(session = session,"preprocessingTabs",selected = "Pre-processing Completed")
@@ -243,8 +363,8 @@ observeEvent(input$import_goToComparison,{
 
 observeEvent(input$import_goToAutomaticPreprocess,{
   
-  hideTab(inputId = "preprocessingTabs","Import",session = session)
-  hideTab(inputId = "preprocessingTabs","Manual Deletion - Select a Scan",session = session)
+  # hideTab(inputId = "preprocessingTabs","Import",session = session)
+  # hideTab(inputId = "preprocessingTabs","Manual Deletion - Select a Scan",session = session)
   showTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
   
   updateTabsetPanel(session = session,"preprocessingTabs",selected = "Automatic Pre-process")
@@ -257,8 +377,8 @@ observeEvent(input$import_goToAutomaticPreprocess,{
 
 observeEvent(input$import_goToManualPreprocess,{
   
-  hideTab(inputId = "preprocessingTabs","Import",session = session)
-  hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
+  # hideTab(inputId = "preprocessingTabs","Import",session = session)
+  # hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
   showTab(inputId = "preprocessingTabs",target = "Manual Deletion - Select a Scan",session = session)
   
   updateTabsetPanel(session = session,"preprocessingTabs",selected = "Manual Deletion - Select a Scan")

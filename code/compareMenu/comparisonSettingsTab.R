@@ -435,15 +435,15 @@ observeEvent(input$comparisonButton,{
   
   updateSelectInput(session = session,
                     inputId = "comparisonSummary_referenceSelect",
-                    choices = c("",input$referenceSelect))
+                    choices = c(input$referenceSelect))
   
   updateSelectInput(session = session,
                     inputId = "postComparisonScanSelect",
-                    choices = c("",input$referenceSelect))
+                    choices = c(input$referenceSelect))
   
   updateSelectInput(session = session,
                     inputId = "cellTrajectoryScan",
-                    choices = c("",input$referenceSelect))
+                    choices = c(input$referenceSelect))
   
   # updateSelectInput(session = session,
   #                   inputId = "customCellSelection",
@@ -504,23 +504,23 @@ observeEvent(input$comparisonButton,{
     
     updateSelectInput(session = session,
                       inputId = "postComparisonScanSelect",
-                      choices = c("",input$referenceSelect,input$targetSelect))
+                      choices = c(input$referenceSelect,input$targetSelect))
     
     updateSelectInput(session = session,
                       inputId = "cellTrajectoryScan",
-                      choices = c("",input$referenceSelect,input$targetSelect))
+                      choices = c(input$referenceSelect,input$targetSelect))
     
     updateSelectInput(session = session,
                       inputId = "comparisonSummary_referenceSelect",
-                      choices = c("",input$referenceSelect,input$targetSelect))
+                      choices = c(input$referenceSelect,input$targetSelect))
     
     updateSelectInput(session = session,
                       inputId = "cmcMethodReferenceSelect",
-                      choices = c("",input$referenceSelect,input$targetSelect))
+                      choices = c(input$referenceSelect,input$targetSelect))
     
     updateSelectInput(session = session,
                       inputId = "cmcMethodTargetSelect",
-                      choices = c("",input$referenceSelect,input$targetSelect))
+                      choices = c(input$referenceSelect,input$targetSelect))
     
   }
   

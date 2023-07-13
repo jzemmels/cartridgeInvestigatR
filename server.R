@@ -90,7 +90,7 @@ server = function(input, output, session) {
          "Click on the 'Perform Comparison' button at the bottom of the sidebar once you're happy with the parameters.",
          "Once the comparison finishes (the loading bar vanishes), you can assess the comparison results using the 'Results Summary' or 'Individual Cell Results' tabs."),
       h4("In the 'Results Summary' tab, you can select a scan from the dropdown.",
-         "The plots that appear depict the similarity features extracted during the cell-based comparison procedure.",),
+         "The plots that appear depict the similarity features extracted during the cell-based comparison procedure."),
       h4("In the 'Individual Cell Results' tab, you can select a scan from the dropdown.",
          "Click on a cell in the plot that appears to visualize its alignment in the compared scan.",
          "A comparison plot appears at the bottom of the page that shows similarities and differences between the selected cell and the region to which it aligns in the other scan."),
@@ -238,6 +238,10 @@ server = function(input, output, session) {
   hideTab(inputId = "comparingTabs",target = "Individual Cell Results",session = session)
   # hideTab(inputId = "comparingTabs",target = "Custom Cell",session = session)
   
+  observeEvent(input$letsGoButton,{
+    shinyjs::show(id = "importUI")
+    shinyjs::show(id = "importMessage")
+  })
   
   # import interactivity of the Import tab
   source("code/importAndPreprocessMenu/importTab.R",local = TRUE)
@@ -293,10 +297,11 @@ server = function(input, output, session) {
       output$scoreSettings_ui <- renderUI({
         
         ret <- tagList(
+          # br(),
           # uiOutput(outputId = "cmcTab_useExploreResults_ui"),
           actionButton(inputId = "cmcTabSettings_button",
                        icon = fontawesome::fa_i("cog"),
-                       label = "Settings"),
+                       label = "Parameter Settings"),
           br(),
           shinyjs::hidden(div(id = "cmcTabMenu",
                               textInput(inputId = "cmcTab_numCells",
@@ -348,11 +353,12 @@ server = function(input, output, session) {
       
       output$scoreSettings_ui <- renderUI({
         
-        ret <- tagList(#br(),
+        ret <- tagList(
+          # br(),
           actionButton(inputId = "acesCalculate",
                        style="color: #fff; background-color: #95bb72; border-color: #4b6043",
                        icon = icon("play"),
-                       label = "Estimate Match Probability"))
+                       label = "Predict Similarity Score"))
         
         return(ret)
       })

@@ -32,18 +32,22 @@ output$export_checkboxUI <- renderUI({
   
   ret <- tagList(#id = "exportOptions",
     checkboxGroupInput(inputId = "preprocessExport",
-                       label = "Import + Pre-process Tab",
+                       label = "Import + Pre-process Tab - export if you wish to further analyze the original/pre-processed cartridge cases",
                        choices = c("Original Scans (.x3p)",
                                    "Pre-processed Scans (.x3p)"),
                        selected = c("Original Scans (.x3p)",
-                                    "Pre-processed Scans (.x3p)")),
-    uiOutput(outputId = "compareExport_ui"),
+                                    "Pre-processed Scans (.x3p)"),
+                       width = 1000),
     uiOutput(outputId = "scoreExport_ui"),
-    checkboxInput(inputId = "scriptExport",label = "Reproducible R script (.R)",value = TRUE),
+    uiOutput(outputId = "compareExport_ui"),
+    checkboxInput(inputId = "scriptExport",label = "Reproducible R script (.R) - export to ensure that all results are reproducible",
+                  value = TRUE,
+                  width = 1000),
     radioButtons(inputId = "exportFileType",
-                 label = "Exported file type (note: .csv does not contain aligned cell .x3ps)",
+                 label = "Exported file type (note: csv does not contain aligned X3Ps, but RData tends to be larger)",
                  choices = c(".csv",".RData"),
-                 selected = ".csv"),
+                 selected = ".csv",
+                 width = 1000),
     downloadButton("exportButton",
                    label = "Export to .zip file",
                    style="color: #fff; background-color: #95bb72; border-color: #4b6043",
@@ -63,9 +67,10 @@ observeEvent(input$comparisonButton,{
     output$compareExport_ui <- renderUI({
       
       checkboxGroupInput(inputId = "compareExport",
-                         label = "Explore Tab",
+                         label = "Explore Tab - export if you want a record of your experimentation",
                          choices = c("Comparison Results (large if exported as .RData)",
-                                     "Custom Cell Results"))
+                                     "Custom Cell Results"),
+                         width = 1000)
       
     }) 
     
@@ -75,8 +80,9 @@ observeEvent(input$comparisonButton,{
     output$compareExport_ui <- renderUI({
       
       checkboxGroupInput(inputId = "compareExport",
-                         label = "Explore Tab",
-                         choices = c("Comparison Results (large if exported as .RData)"))
+                         label = "Explore Tab - export if you want a record of your experimentation",
+                         choices = c("Comparison Results (large if exported as .RData)"),
+                         width = 1000)
       
     })
     
@@ -92,9 +98,10 @@ observeEvent(input$customCellExecute,{
     output$compareExport_ui <- renderUI({
       
       checkboxGroupInput(inputId = "compareExport",
-                         label = "Explore Tab",
+                         label = "Explore Tab - export if you want a record of your experimentation",
                          choices = c("Comparison Results (large if exported as .RData)",
-                                     "Custom Cell Results"))
+                                     "Custom Cell Results"),
+                         width = 1000)
       
     })
     
@@ -104,8 +111,9 @@ observeEvent(input$customCellExecute,{
     output$compareExport_ui <- renderUI({
       
       checkboxGroupInput(inputId = "compareExport",
-                         label = "Explore Tab",
-                         choices = c("Custom Cell Results"))
+                         label = "Explore Tab - export if you want a record of your experimentation",
+                         choices = c("Custom Cell Results"),
+                         width = 1000)
       
     })
     
@@ -122,12 +130,13 @@ observeEvent(input$acesCalculate,{
     output$scoreExport_ui <- renderUI({
       
       checkboxGroupInput(inputId = "scoreExport",
-                         label = "Score Tab",
+                         label = "Score Tab - export if you want a record of the similarity scores",
                          choices = c(
                            "All ACES Results (large if export as .RData)",
                            "ACES Features",
                            "All CMC Results (large if export as .RData)",
-                           "CMC Counts"))
+                           "CMC Counts"),
+                         width = 1000)
       
     })
     
@@ -137,9 +146,10 @@ observeEvent(input$acesCalculate,{
     output$scoreExport_ui <- renderUI({
       
       checkboxGroupInput(inputId = "scoreExport",
-                         label = "Score Tab",
+                         label = "Score Tab - export if you want a record of the similarity scores",
                          choices = c("ACES Registrations (large if export as .RData)",
-                                     "ACES Features"))
+                                     "ACES Features"),
+                         width = 1000)
       
     })
     
@@ -155,12 +165,13 @@ observeEvent(input$cmcPlotExecute,{
     output$scoreExport_ui <- renderUI({
       
       checkboxGroupInput(inputId = "scoreExport",
-                         label = "Score Tab",
+                         label = "Score Tab - export if you want a record of the similarity scores",
                          choices = c(
                            "All ACES Results (large if export as .RData)",
                            "ACES Features",
                            "All CMC Results (large if export as .RData)",
-                           "CMC Counts"))
+                           "CMC Counts"),
+                         width = 1000)
       
     })
     
@@ -170,9 +181,10 @@ observeEvent(input$cmcPlotExecute,{
     output$scoreExport_ui <- renderUI({
       
       checkboxGroupInput(inputId = "scoreExport",
-                         label = "Score Tab",
+                         label = "Score Tab - export if you want a record of the similarity scores",
                          choices = c("All CMC Results (large if export as .RData)",
-                                     "CMC Counts"))
+                                     "CMC Counts"),
+                         width = 1000)
       
     })
     

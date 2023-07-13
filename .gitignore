@@ -2,7 +2,10 @@
 .Rhistory
 .RData
 .Ruserdata
-data/
 test_bullet_folder/
 interpolate_test.R
 test_app/
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto

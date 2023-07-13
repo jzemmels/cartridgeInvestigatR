@@ -153,6 +153,20 @@ observeEvent(input$cmcPlotExecute,{
     .[[1]] %>%
     purrr::map_int(as.integer)
   
+  if(!isTRUE(all.equal(reference$header.info$incrementX,target$header.info$incrementX))){
+    
+    if(reference$header.info$incrementX > target$header.info$incrementX){
+      
+      target <- x3ptools::x3p_interpolate(target,resx = reference$header.info$incrementX)
+      
+    }
+    else{
+      
+      reference <- x3ptools::x3p_interpolate(reference,resx = target$header.info$incrementX)
+      
+    }
+  }
+  
   shinybusy::show_modal_progress_line(text = paste0("Comparing cells"),value = 0)
   
   compData <- scored::comparison_cellBased(reference = reference,

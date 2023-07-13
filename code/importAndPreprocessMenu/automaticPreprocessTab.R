@@ -71,7 +71,7 @@ observeEvent(input$insertBtn, {
     selector = '#placeholder',
     ui = div(
       id = Id()('div',ctn()),
-      fluidRow(column(4,selectInput(Id()('letter',ctn()), 'Select Pre-processing Step', c("Downsample","Crop","Level","Erode","Filter","Delete"),selected = NULL,multiple = FALSE)),
+      fluidRow(column(4,selectInput(Id()('letter',ctn()), 'Select Pre-processing Step', c("Downsample","Crop","Level","Erode","Filter","Delete","Trim"),selected = NULL,multiple = FALSE)),
                column(8,uiOutput(Id()('input',ctn()))))
     )
   )
@@ -89,15 +89,16 @@ observeEvent(ctn(), {
     req(input[[Id()('letter',ctn)]])
     switch(
       input[[selection]],
-      'Downsample' = numericInput(Id()('params1_',ctn), 'Stride',value = 2,min = 1),
+      'Downsample' = column(width = 8,numericInput(Id()('params1_',ctn), 'Stride',value = 2,min = 1)),
       'Crop' = column(width = 8,selectInput(Id()('params1_',ctn), 'Region',choices = c("Interior","Exterior")),
                       numericInput(Id()('params2_',ctn), 'Offset',value = 0)),
-      'Level' = selectInput(Id()('params1_',ctn),"Statistic",choices = c("Median","Mean")),
+      'Level' = column(width = 8,selectInput(Id()('params1_',ctn),"Statistic",choices = c("Median","Mean"))),
       'Erode' = column(width = 8,selectInput(Id()('params1_',ctn), 'Region',choices = c("Interior","Exterior")),
                        numericInput(Id()('params2_',ctn), 'Radius',value = 1,min = 1)),
       'Filter' = column(width = 8,selectInput(Id()('params1_',ctn), 'Filtertype',choices = c("Bandpass","Lowpass")),
                         textInput(Id()('params2_',ctn), 'Wavelength(s) - Use comma separation for Bandpass',value = "16, 500")),
-      'Delete' = column(width = 8)
+      'Delete' = column(width = 8,textInput(Id()('params1_',ctn), 'Mask Hex Value to Delete',value = "#000000FF")),
+      'Trim' = column(width = 8)
     )
   })
   
@@ -216,18 +217,20 @@ observeEvent(input$preProcessExecute,{
 observeEvent(input$preProcessExecute,{
   
   output$automaticPreprocess_nextStep_ui <- renderUI({
-    box(width = 12,align = "center",
-        h4("Choose one of the following"),
-        br(),
+    box(width = 12,#align = "center",
+        h4('Preview the scans to the right.
+           If you are satisfied with the automatic pre-processing, then choose one of the options below.
+           Otherwise, press "Reset All Pre-processing Steps" to start over.'),
+        # br(),
         actionButton(inputId = "automaticPreprocess_goToManualPreprocess",
-                     label = "Needs Manual Pre-processing",
-                     width = 300,
+                     label = "I would like to manually pre-process specific scans.",
+                     width = 350,
                      icon = fontawesome::fa_i("hand-scissors")),
         br(),
         br(),
         actionButton(inputId = "automaticPreprocess_goToComparison",
-                     label = "I would like to compare these scans",
-                     width = 300,
+                     label = "Looks good! I would like to compare these scans.",
+                     width = 350,
                      style="color: #fff; background-color: #95bb72; border-color: #4b6043",
                      icon = icon("pencil-ruler"))
     )})
@@ -247,9 +250,9 @@ observeEvent(input$restartPreprocess,{
 
 observeEvent(input$automaticPreprocess_goToComparison,{
   
-  hideTab(inputId = "preprocessingTabs","Import",session = session)
-  hideTab(inputId = "preprocessingTabs","Manual Deletion - Select a Scan",session = session)
-  hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
+  # hideTab(inputId = "preprocessingTabs","Import",session = session)
+  # hideTab(inputId = "preprocessingTabs","Manual Deletion - Select a Scan",session = session)
+  # hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
   showTab(inputId = "preprocessingTabs",target = "Pre-processing Completed",session = session)
   
   # output$import_nextStep_ui <- renderUI("Click on '2. Compare' in the sidebar menu")
@@ -274,7 +277,7 @@ observeEvent(input$automaticPreprocess_goToComparison,{
     
   })
   
-  shinyjs::toggleClass(selector = "body", class = "sidebar-collapse")
+  shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
   
   # updateTabItems(session = session,inputId = "stages",selected = "comparing")
   updateTabsetPanel(session = session,"preprocessingTabs",selected = "Pre-processing Completed")
@@ -285,8 +288,8 @@ observeEvent(input$automaticPreprocess_goToComparison,{
 
 observeEvent(input$automaticPreprocess_goToManualPreprocess,{
   
-  hideTab(inputId = "preprocessingTabs","Import",session = session)
-  hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
+  # hideTab(inputId = "preprocessingTabs","Import",session = session)
+  # hideTab(inputId = "preprocessingTabs",target = "Automatic Pre-process",session = session)
   showTab(inputId = "preprocessingTabs",target = "Manual Deletion - Select a Scan",session = session)
   
   updateTabsetPanel(session = session,"preprocessingTabs",selected = "Manual Deletion - Select a Scan")
